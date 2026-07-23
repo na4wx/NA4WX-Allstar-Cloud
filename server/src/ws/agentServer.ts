@@ -3,6 +3,7 @@ import type { Server as HTTPServer } from "node:http";
 import { WebSocketServer, type WebSocket } from "ws";
 
 import { DeviceModel, toDeviceSummary } from "../models/Device.js";
+import { resolveCall } from "../services/relay.js";
 import { hashAPIKey } from "../utils/apiKey.js";
 import { broadcast } from "./browserHub.js";
 
@@ -25,9 +26,8 @@ interface Envelope {
 }
 
 // connections holds one live WebSocket per currently-connected device,
-// keyed by Device _id string -- Phase 2's relay.ts will look a
-// connection up here to send a "call" envelope and await the
-// correlated "result". Nothing sends a "call" yet in Phase 1.
+// keyed by Device _id string -- services/relay.ts looks a connection up
+// here to send a "call" envelope and await the correlated "result".
 const connections = new Map<string, WebSocket>();
 
 export function getConnection(deviceId: string): WebSocket | undefined {
@@ -121,11 +121,10 @@ async function handleMessage(deviceId: string, raw: import("ws").RawData): Promi
     return;
   }
 
-  // "result" (a reply to a relayed "call") has nothing to resolve yet
-  // in Phase 1 -- no calls are ever sent, so any result received here
-  // is simply ignored rather than logged as unexpected. Phase 2's
-  // relay.ts will register a pending-call table this branch resolves
-  // against.
+  if (msg.type === "result" && msg.id) {
+    resolveCall(msg.id, msg.ok === true, msg.error, msg.data);
+    return;
+  }
 }
 
 async function handleClose(deviceId: string): Promise<void> {

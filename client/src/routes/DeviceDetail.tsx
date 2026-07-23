@@ -100,7 +100,9 @@ export function DeviceDetail() {
       </div>
 
       <div className="card">
-        <h2>Nodes reported by this device</h2>
+        <div className="label-row">
+          <h2 style={{ margin: 0 }}>Nodes reported by this device</h2>
+        </div>
         {device.nodes.length === 0 && <p className="hint">None reported yet.</p>}
         {device.nodes.length > 0 && (
           <div className="table-scroll">
@@ -109,6 +111,7 @@ export function DeviceDetail() {
                 <tr>
                   <th>Number</th>
                   <th>Last seen</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -116,15 +119,23 @@ export function DeviceDetail() {
                   <tr key={n.number}>
                     <td className="tag">{n.number}</td>
                     <td>{new Date(n.lastSeenAt).toLocaleString()}</td>
+                    <td>
+                      <Link to={`/devices/${device.id}/nodes/${n.number}`}>Edit</Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
+        <div className="actions">
+          <Link to={`/devices/${device.id}/nodes`} className="btn">
+            Manage nodes
+          </Link>
+        </div>
         <p className="hint" style={{ marginTop: "1rem" }}>
-          Config editing, restart/reboot, and the rest of the local app's features are managed remotely in a later phase — this
-          page currently shows read-only connectivity status.
+          Config editing currently covers the same fields as the local app's own Setup tab. AllStarLink network registration,
+          command/tone sets, sounds, restart/reboot, and the rest follow in later phases.
         </p>
       </div>
     </div>

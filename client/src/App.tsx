@@ -5,6 +5,8 @@ import { TopNav } from "./components/TopNav";
 import { DeviceDetail } from "./routes/DeviceDetail";
 import { DevicesList } from "./routes/DevicesList";
 import { Login } from "./routes/Login";
+import { NodeEditor } from "./routes/NodeEditor";
+import { NodesList } from "./routes/NodesList";
 import { Register } from "./routes/Register";
 import { useAuth } from "./state/auth";
 
@@ -40,6 +42,22 @@ export function App() {
             element={
               <RequireAuth>
                 <DeviceDetail />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/devices/:deviceId/nodes"
+            element={
+              <RequireAuth>
+                <NodesList />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/devices/:deviceId/nodes/:number"
+            element={
+              <RequireAuth>
+                <NodeEditor />
               </RequireAuth>
             }
           />
