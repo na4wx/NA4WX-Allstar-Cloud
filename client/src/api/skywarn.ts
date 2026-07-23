@@ -7,10 +7,24 @@ export interface CountyOption {
   code: string;
 }
 
+// PushoverStatus/SkyDescribeStatus mirror internal/skywarnplus's own
+// PushoverStatus/SkyDescribeStatus JSON shapes.
+export interface PushoverStatus {
+  enable: boolean;
+  userKey: string;
+  apiToken: string;
+  debug: boolean;
+}
+
+export interface SkyDescribeStatus {
+  apiKey: string;
+  language: string;
+  speed: number;
+  voice: string;
+  maxWords: number;
+}
+
 // SkywarnStatus mirrors internal/skywarnplus.Status's JSON shape.
-// Pushover/SkyDescribe settings aren't surfaced in this UI yet (API
-// support exists server-side -- see skywarnplus.routes.ts -- but no
-// client hook/form for them yet).
 export interface SkywarnStatus {
   enable: boolean;
   sayAlert: boolean;
@@ -19,6 +33,8 @@ export interface SkywarnStatus {
   alertScript: boolean;
   countyCodes: string[];
   nodes: string[];
+  pushover: PushoverStatus;
+  skyDescribe: SkyDescribeStatus;
   courtesyToneSwapEnabled: boolean;
   idSwapEnabled: boolean;
   activeAlertCount: number;
@@ -61,6 +77,22 @@ export function useSkywarnAddNode(deviceId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (node: string) => apiFetch(`/api/devices/${deviceId}/skywarn/nodes`, { method: "POST", body: JSON.stringify({ node }) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "skywarn", "status"] }),
+  });
+}
+
+export function useSkywarnSetPushover(deviceId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (pushover: PushoverStatus) => apiFetch(`/api/devices/${deviceId}/skywarn/pushover`, { method: "POST", body: JSON.stringify(pushover) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "skywarn", "status"] }),
+  });
+}
+
+export function useSkywarnSetSkyDescribe(deviceId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (skyDescribe: SkyDescribeStatus) => apiFetch(`/api/devices/${deviceId}/skywarn/skydescribe`, { method: "POST", body: JSON.stringify(skyDescribe) }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "skywarn", "status"] }),
   });
 }

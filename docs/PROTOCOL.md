@@ -188,10 +188,23 @@ all.
 | `system.status` | — | `system.Snapshot` | none |
 | `system.restartAsterisk` | — | `{ok:true}` | `AllowRemoteReboot` + step-up |
 | `system.reboot` | — | `{ok:true}` | `AllowRemoteReboot` + step-up |
+| `system.dtmf` | `{number, digits}` (`digits` must match `^[0-9*#A-Da-d]+$`) | `{output}` | none |
 | `config.listNodes` | — | `string[]` | none |
 | `config.loadNode` | `{number}` | `config.Node` | none |
 | `config.saveNode` | `config.Node` (create-or-update, idempotent) | `config.Node` | none |
 | `config.deleteNode` | `{number}` | `{ok:true}` | none |
+| `config.setCourtesyTones` | `{number, unlinkedCT, remoteCT, linkUnkeyCT}` | `{ok:true}` | none |
+| `config.listTelemetry` | `{number}` | `[{key, value, tone?: {freq1,freq2,durationMs,amplitude}}]` (`tone` present only when `value` parses as one tone-generator segment) | none |
+| `config.setTelemetry` | `{number, key, value}` | `{ok:true}` | none |
+| `config.listFunctionMacros` | `{number, kind: "functions"\|"macro"}` | `[{digits, command}]` (wraps `config.FunctionMacro`, which has no JSON tags of its own) | none |
+| `config.saveFunctionMacro` | `{number, kind, digits, command}` | `{ok:true}` | none |
+| `config.deleteFunctionMacro` | `{number, kind, digits}` | `{ok:true}` | none |
+| `schedule.list` | `{number}` | `[{macroNum, label, recognized, timeSpec}]` (native app_rpt connect/disconnect scheduler, distinct from `soundSchedule.*`'s own sound-playback ticker) | none |
+| `schedule.saveConnection` | `{number, action, target?, minute, hour, dom, month, weekdays: string[]}` (`action` one of `connect_stay`\|`connect_listen`\|`disconnect_one`\|`disconnect_all`; each of `minute`/`hour`/`dom`/`month`/each weekday must be a single number or `*`; one weekday fans out into one schedule+macro entry each, sharing one functions-table digit) | `{ok:true}` | none |
+| `schedule.deleteConnection` | `{number, macroNum}` | `{ok:true}` (deletes the schedule entry and its own macro entry; the shared functions-table digit is left alone) | none |
+| `config.cloneNodeConfig` | `{srcNumber, dstNumber}` | `{ok:true}` (copies functions/macro/telemetry/morse from srcNumber, safe to re-run) | none |
+| `config.applyStandardCommandSet` | `{number}` | `{ok:true}` (bootstraps a working functions/macro/telemetry/morse set from known-good defaults) | none |
+| `config.normalizeNodeConfig` | `{number}` | `{changed: string[]}` (repairs command/tone sections not named for this node; empty when nothing needed repair) | none |
 | `soundSchedule.list` | `{node}` | `soundschedule.Entry[]` | none |
 | `soundSchedule.save` | `soundschedule.Entry` | `{ok:true}` | none |
 | `soundSchedule.delete` | `{id}` | `{ok:true}` | none |
@@ -199,6 +212,8 @@ all.
 | `wxTone.save` | `wxtone.Entry` | `{ok:true}` | none |
 | `wxTone.delete` | `{id}` | `{ok:true}` | none |
 | `sa818.program` | `sa818.Settings` | `{ok, output}` | none (write-only hardware action; no capability flag — see actions_sa818.go) |
+| `iax.loadRegistration` | `{number}` | `{registration?: {password, host, port}, peer?: {type, context, host, secret, auth}}` (either half absent if never registered) | none |
+| `iax.saveRegistration` | `{number, password, host?, port?, peerType?, peerContext?, peerHost?, peerSecret?, peerAuth?}` (blank optional fields default the same way the local app's own registration form does) | `{ok:true}` | none |
 | `skywarn.listCounties` | — | `skywarnplus.CountyOption[]` (works even if SkywarnPlus isn't installed) | none |
 | `skywarn.getStatus` | — | `skywarnplus.Status` | SkywarnPlus installed |
 | `skywarn.setToggle` | `{key, value}` | `{ok:true}` | SkywarnPlus installed |

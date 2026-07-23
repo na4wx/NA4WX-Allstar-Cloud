@@ -162,6 +162,27 @@ table th { color: var(--text-dim); font-weight: 550; font-size: 0.86rem; }
   font-variant-numeric: tabular-nums;
 }
 
+.tabs {
+  display: flex;
+  gap: 0.2rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.1rem;
+  overflow-x: auto;
+}
+.tab {
+  padding: 0.6rem 1rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+  font-weight: 550;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); opacity: 0.5; flex-shrink: 0; }
 .live-dot.on { background: var(--ok); opacity: 1; animation: live-breathe 2s ease-in-out infinite; }
 @keyframes live-breathe { 50% { opacity: 0.4; } }

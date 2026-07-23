@@ -453,9 +453,8 @@ export function DeviceDetail() {
           </Link>
         </div>
         <p className="hint" style={{ marginTop: "1rem" }}>
-          Node config editing covers the same fields as the local app's own Setup tab. Each node's own WX courtesy tones,
-          sound schedule, and SkywarnPlus settings are on its own edit page. AllStarLink network registration and command/tone
-          sets are not yet editable here.
+          Each node's edit page is tabbed, matching the local app's own Setup / Tones &amp; Audio / Allstar Network / Live
+          &amp; Commands / Scheduler / SkywarnPlus layout — full parity with the local app's own node editor.
         </p>
       </div>
     </div>

@@ -45,6 +45,16 @@ specific, hardcoded internal call. `TestActionsRegistryIsFixedAllowlist`
 accidental switch to a dynamic dispatcher would have to change that
 test too, not slip in silently.
 
+`system.dtmf` (`actions_dtmf.go`) is the one action that does build a
+shell-adjacent command string (`asterisk -rx "rpt fun <node>
+<digits>"`) from client input — its `digits` field is validated against
+`^[0-9*#A-Da-d]+$` before that string is built, deliberately stricter
+than the local app's own `handleNodeSendDTMF`, which has no character
+validation at all (fine for a LAN-only session where the operator types
+the digits directly). The cloud relay is a higher-trust boundary than a
+local session, so this action set is more defensive than local, not
+merely as defensive.
+
 The same discipline applies to the one place this service itself runs
 an external tool: `services/piperTts.ts`'s `synthesize` spawns Piper via
 array-form `child_process.spawn` (never a shell, so shell metacharacters

@@ -19,7 +19,7 @@ nodesRouter.use(requireAuth, authorizeDevice);
 // parent router -- this alias documents that deviceId always comes from
 // the parent (checked by authorizeDevice above) and needs an explicit
 // cast to read here.
-type NodeParams = Request<{ deviceId: string; number?: string }>;
+type NodeParams = Request<{ deviceId: string; number?: string; key?: string; macroNum?: string }>;
 
 nodesRouter.get("/", async (req: NodeParams, res) => {
   const numbers = await auditedSendAction<string[]>(req, "config.listNodes");
@@ -45,6 +45,93 @@ nodesRouter.put("/:number", async (req: NodeParams, res) => {
 nodesRouter.delete("/:number", async (req: NodeParams, res) => {
   await auditedSendAction(req, "config.deleteNode", { number: req.params.number });
   res.status(204).end();
+});
+
+nodesRouter.put("/:number/courtesy-tones", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "config.setCourtesyTones", { ...req.body, number: req.params.number });
+  res.json(result);
+});
+
+nodesRouter.get("/:number/telemetry", async (req: NodeParams, res) => {
+  const entries = await auditedSendAction(req, "config.listTelemetry", { number: req.params.number });
+  res.json(entries);
+});
+
+nodesRouter.put("/:number/telemetry/:key", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "config.setTelemetry", { number: req.params.number, key: req.params.key, value: req.body.value });
+  res.json(result);
+});
+
+nodesRouter.get("/:number/iax", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "iax.loadRegistration", { number: req.params.number });
+  res.json(result);
+});
+
+nodesRouter.put("/:number/iax", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "iax.saveRegistration", { ...req.body, number: req.params.number });
+  res.json(result);
+});
+
+nodesRouter.post("/:number/dtmf", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "system.dtmf", { number: req.params.number, digits: req.body.digits });
+  res.json(result);
+});
+
+// kind ("functions" | "macro") is always in the request body/query, not
+// the URL -- one route family covers both the command list and saved
+// macros tables, matching the Go app's own kind-enum action shape (see
+// actions_functions.go's own doc comment on why it's an enum, never a
+// raw section name).
+nodesRouter.get("/:number/functions", async (req: NodeParams, res) => {
+  const entries = await auditedSendAction(req, "config.listFunctionMacros", { number: req.params.number, kind: req.query.kind });
+  res.json(entries);
+});
+
+nodesRouter.put("/:number/functions", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "config.saveFunctionMacro", { ...req.body, number: req.params.number });
+  res.json(result);
+});
+
+nodesRouter.delete("/:number/functions", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "config.deleteFunctionMacro", { ...req.body, number: req.params.number });
+  res.json(result);
+});
+
+// The native app_rpt connect/disconnect scheduler -- distinct from
+// soundSchedule.* (sound-playback ticker, see soundschedule.routes.ts).
+nodesRouter.get("/:number/schedule", async (req: NodeParams, res) => {
+  const rows = await auditedSendAction(req, "schedule.list", { number: req.params.number });
+  res.json(rows);
+});
+
+nodesRouter.post("/:number/schedule", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "schedule.saveConnection", { ...req.body, number: req.params.number });
+  res.json(result);
+});
+
+nodesRouter.delete("/:number/schedule/:macroNum", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "schedule.deleteConnection", { number: req.params.number, macroNum: req.params.macroNum });
+  res.json(result);
+});
+
+// Command/tone-set management: give a node (including one created
+// before this app knew how to give a new node a working command set) a
+// complete functions/macro/telemetry/morse set, either copied from
+// another node or bootstrapped from known-good defaults, or repair one
+// whose sections are named for a different node entirely.
+nodesRouter.post("/:number/clone-config", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "config.cloneNodeConfig", { srcNumber: req.body.srcNumber, dstNumber: req.params.number });
+  res.json(result);
+});
+
+nodesRouter.post("/:number/apply-standard-command-set", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "config.applyStandardCommandSet", { number: req.params.number });
+  res.json(result);
+});
+
+nodesRouter.post("/:number/normalize", async (req: NodeParams, res) => {
+  const result = await auditedSendAction(req, "config.normalizeNodeConfig", { number: req.params.number });
+  res.json(result);
 });
 
 // GET /:number/live streams this node's moment-to-moment repeater state
