@@ -1,0 +1,216 @@
+/* Component styles ported from HamVoipConfigGui's web/static/css/style.css
+   — the same classes, so the local app's markup patterns translate
+   directly into JSX (className="card", etc.) without reinventing them. */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15.5px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+header.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.5rem;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  backdrop-filter: saturate(1.6) blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+header.topbar .brand {
+  font-weight: 650;
+  letter-spacing: -0.015em;
+  font-size: 1.02rem;
+  text-decoration: none;
+  color: var(--text);
+}
+header.topbar nav { display: flex; align-items: center; gap: 0.15rem; }
+header.topbar nav a, header.topbar nav button {
+  color: var(--text-dim);
+  text-decoration: none;
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.92rem;
+  font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+}
+header.topbar nav a:hover, header.topbar nav button:hover { color: var(--text); background: var(--surface-2); }
+
+main {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-sm);
+}
+
+h1 { font-size: 1.7rem; font-weight: 680; letter-spacing: -0.025em; margin: 0 0 1.35rem; }
+h2 { font-size: 1.12rem; font-weight: 620; letter-spacing: -0.015em; margin: 0 0 0.85rem; }
+
+.field { margin-bottom: 1.1rem; }
+.field label { display: block; font-size: 0.88rem; font-weight: 550; color: var(--text); margin-bottom: 0.4rem; }
+.field .hint { font-size: 0.82rem; color: var(--text-dim); margin-top: 0.4rem; }
+
+input[type="text"], input[type="password"], input[type="email"], input[type="number"], select, textarea {
+  width: 100%;
+  padding: 0.62rem 0.8rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+input::placeholder { color: var(--text-dim); opacity: 0.75; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.row { display: flex; gap: 1.15rem; flex-wrap: wrap; }
+.row .field { flex: 1; min-width: 190px; }
+
+button, .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 550;
+  cursor: pointer;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease, box-shadow 0.15s ease;
+}
+button:hover, .btn:hover { background: var(--surface-2); border-color: var(--text-dim); }
+button:active, .btn:active { transform: translateY(1px); }
+button:disabled, .btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+button.primary, .btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+  box-shadow: var(--shadow-sm);
+}
+button.primary:hover, .btn.primary:hover {
+  background: color-mix(in srgb, var(--accent) 88%, #000);
+  border-color: color-mix(in srgb, var(--accent) 88%, #000);
+}
+
+button.danger, .btn.danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border));
+}
+button.danger:hover, .btn.danger:hover { background: var(--danger-soft); border-color: var(--danger); }
+
+.actions { display: flex; gap: 0.65rem; margin-top: 1.25rem; flex-wrap: wrap; }
+
+table { width: 100%; border-collapse: collapse; }
+table th, table td { text-align: left; padding: 0.65rem 0.7rem; border-bottom: 1px solid var(--border); }
+table th { color: var(--text-dim); font-weight: 550; font-size: 0.86rem; }
+
+.table-scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.data-table { font-size: 0.89rem; }
+.data-table th {
+  white-space: nowrap;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.data-table tbody tr:hover { background: var(--surface); }
+.data-table tbody tr:last-child td { border-bottom: none; }
+
+.tag {
+  display: inline-block;
+  padding: 0.18rem 0.55rem;
+  margin: 0.12rem 0.2rem 0.12rem 0;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 550;
+  font-variant-numeric: tabular-nums;
+}
+
+.live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); opacity: 0.5; flex-shrink: 0; }
+.live-dot.on { background: var(--ok); opacity: 1; animation: live-breathe 2s ease-in-out infinite; }
+@keyframes live-breathe { 50% { opacity: 0.4; } }
+@media (prefers-reduced-motion: reduce) { .live-dot.on { animation: none; } }
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.85rem;
+  font-weight: 550;
+  padding: 0.32rem 0.8rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+.status-pill .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-dim); flex-shrink: 0; }
+.status-pill.up { background: var(--ok-soft); border-color: color-mix(in srgb, var(--ok) 30%, transparent); color: var(--ok); }
+.status-pill.up .dot { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 20%, transparent); }
+.status-pill.down { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 30%, transparent); color: var(--danger); }
+.status-pill.down .dot { background: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 20%, transparent); }
+
+.flash {
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.25rem;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  border: 1px solid transparent;
+  border-left-width: 3px;
+}
+.flash.error {
+  background: var(--danger-soft);
+  border-color: color-mix(in srgb, var(--danger) 25%, transparent);
+  border-left-color: var(--danger);
+  color: color-mix(in srgb, var(--danger) 80%, var(--text));
+}
+.flash.ok {
+  background: var(--ok-soft);
+  border-color: color-mix(in srgb, var(--ok) 25%, transparent);
+  border-left-color: var(--ok);
+  color: color-mix(in srgb, var(--ok) 80%, var(--text));
+}
+
+.label-row { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 0.4rem; }
+.label-row label { margin-bottom: 0; }
+
+.login-wrap { max-width: 380px; margin: 5rem auto; }
+
+.muted { color: var(--text-dim); font-size: 0.88em; }
+.hint { font-size: 0.82rem; color: var(--text-dim); }
