@@ -32,7 +32,13 @@ export function useNodeLive(deviceId: string, number: string): { live: NodeLiveS
     source.addEventListener("open", () => setConnected(true));
     source.addEventListener("error", () => setConnected(false));
     source.addEventListener("live", (event) => {
-      setLive(JSON.parse((event as MessageEvent).data) as NodeLiveState);
+      const parsed = JSON.parse((event as MessageEvent).data) as NodeLiveState;
+      // A Go []T with nothing in it marshals to JSON null, not [] --
+      // normalize here, once, so every consumer of `live` can always
+      // call .length/.map on `connected` without a null check of its
+      // own. "Nothing connected right now" is the common case for a
+      // real node, not an edge case.
+      setLive({ ...parsed, connected: parsed.connected ?? [] });
     });
 
     return () => source.close();
