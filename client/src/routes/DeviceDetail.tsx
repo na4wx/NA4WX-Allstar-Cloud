@@ -4,6 +4,8 @@ import { Link, useParams } from "react-router-dom";
 
 import { getAccessToken } from "../api/client";
 import { useDevice, type Device } from "../api/devices";
+import { useReboot, useRestartAsterisk } from "../api/system";
+import { FlashBanner } from "../components/FlashBanner";
 import { LiveDot } from "../components/LiveDot";
 import { StatusPill } from "../components/StatusPill";
 
@@ -12,6 +14,9 @@ export function DeviceDetail() {
   const { data: device, isLoading, error } = useDevice(id!);
   const queryClient = useQueryClient();
   const [live, setLive] = useState(false);
+  const [systemFlash, setSystemFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
+  const restartAsterisk = useRestartAsterisk(id!);
+  const reboot = useReboot(id!);
 
   useEffect(() => {
     if (!id) {
@@ -34,6 +39,32 @@ export function DeviceDetail() {
 
     return () => source.close();
   }, [id, queryClient]);
+
+  const handleRestartAsterisk = async () => {
+    if (!confirm(`Restart Asterisk on ${device?.name}? This briefly interrupts the repeater.`)) {
+      return;
+    }
+    setSystemFlash(null);
+    try {
+      await restartAsterisk.mutateAsync();
+      setSystemFlash({ kind: "ok", message: "Asterisk restarted." });
+    } catch (err) {
+      setSystemFlash({ kind: "error", message: err instanceof Error ? err.message : "restart failed" });
+    }
+  };
+
+  const handleReboot = async () => {
+    if (!confirm(`Reboot ${device?.name} now? Any active radio traffic and connections will drop, and it will take about a minute to come back.`)) {
+      return;
+    }
+    setSystemFlash(null);
+    try {
+      await reboot.mutateAsync();
+      setSystemFlash({ kind: "ok", message: "Rebooting now — this device will stop responding shortly." });
+    } catch (err) {
+      setSystemFlash({ kind: "error", message: err instanceof Error ? err.message : "reboot failed" });
+    }
+  };
 
   if (isLoading) {
     return <p className="hint">Loading…</p>;
@@ -97,6 +128,33 @@ export function DeviceDetail() {
             </tbody>
           </table>
         )}
+      </div>
+
+      <div className="card">
+        <h2>Restart options</h2>
+        {systemFlash && <FlashBanner kind={systemFlash.kind} message={systemFlash.message} />}
+        <div className="row">
+          <div className="field" style={{ flex: "none" }}>
+            <div className="label-row">
+              <span className="muted">Restart just the radio software</span>
+            </div>
+            <button onClick={handleRestartAsterisk} disabled={restartAsterisk.isPending}>
+              Restart radio software
+            </button>
+          </div>
+          <div className="field" style={{ flex: "none" }}>
+            <div className="label-row">
+              <span className="muted">Restart the whole device</span>
+            </div>
+            <button className="danger" onClick={handleReboot} disabled={reboot.isPending}>
+              Reboot device
+            </button>
+          </div>
+        </div>
+        <p className="hint" style={{ marginTop: "1rem" }}>
+          Both require "Allow remote restart/reboot" to be turned on in this device's own Cloud Sync settings — otherwise these
+          are refused.
+        </p>
       </div>
 
       <div className="card">

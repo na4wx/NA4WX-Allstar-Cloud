@@ -12,6 +12,7 @@ import { authRateLimiter } from "./middleware/rateLimiter.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { devicesRouter } from "./routes/devices.routes.js";
 import { nodesRouter } from "./routes/nodes.routes.js";
+import { systemRouter } from "./routes/system.routes.js";
 
 export function buildApp(): Express {
   const app = express();
@@ -20,6 +21,7 @@ export function buildApp(): Express {
 
   app.use("/api/auth", authRateLimiter, authRouter);
   app.use("/api/devices/:deviceId/nodes", nodesRouter);
+  app.use("/api/devices/:deviceId/system", systemRouter);
   app.use("/api/devices", devicesRouter);
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
