@@ -2,12 +2,26 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
+import { useProgramSA818, type SA818Settings } from "../api/sa818";
 import { getAccessToken } from "../api/client";
 import { useDevice, type Device } from "../api/devices";
 import { useReboot, useRestartAsterisk } from "../api/system";
 import { FlashBanner } from "../components/FlashBanner";
 import { LiveDot } from "../components/LiveDot";
 import { StatusPill } from "../components/StatusPill";
+
+const blankSA818: SA818Settings = {
+  wide: true,
+  txFreqMHz: "",
+  rxFreqMHz: "",
+  txCTCSS: "0000",
+  rxCTCSS: "0000",
+  squelch: 5,
+  volume: 4,
+  preDeEmphasis: false,
+  highPassFilter: false,
+  lowPassFilter: false,
+};
 
 export function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +31,9 @@ export function DeviceDetail() {
   const [systemFlash, setSystemFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
   const restartAsterisk = useRestartAsterisk(id!);
   const reboot = useReboot(id!);
+  const programSA818 = useProgramSA818(id!);
+  const [sa818Form, setSA818Form] = useState<SA818Settings>(blankSA818);
+  const [sa818Flash, setSA818Flash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -63,6 +80,20 @@ export function DeviceDetail() {
       setSystemFlash({ kind: "ok", message: "Rebooting now — this device will stop responding shortly." });
     } catch (err) {
       setSystemFlash({ kind: "error", message: err instanceof Error ? err.message : "reboot failed" });
+    }
+  };
+
+  const handleProgramSA818 = async () => {
+    setSA818Flash(null);
+    try {
+      const result = await programSA818.mutateAsync(sa818Form);
+      setSA818Flash(
+        result.ok
+          ? { kind: "ok", message: "Sent to the radio module." }
+          : { kind: "error", message: "The radio module rejected these settings — see raw output below." },
+      );
+    } catch (err) {
+      setSA818Flash({ kind: "error", message: err instanceof Error ? err.message : "programming failed" });
     }
   };
 
@@ -158,6 +189,84 @@ export function DeviceDetail() {
       </div>
 
       <div className="card">
+        <h2>Radio module (SA818/DRA818)</h2>
+        <p className="hint">
+          Programs the SHARI USB's radio module directly over its serial connection. Write-only — there's nothing to read back
+          from the hardware, only a record of what was last sent.
+        </p>
+        {sa818Flash && <FlashBanner kind={sa818Flash.kind} message={sa818Flash.message} />}
+        <div className="row">
+          <div className="field">
+            <label htmlFor="sa818_tx">Transmit frequency (MHz)</label>
+            <input
+              id="sa818_tx"
+              type="text"
+              value={sa818Form.txFreqMHz}
+              onChange={(e) => setSA818Form((f) => ({ ...f, txFreqMHz: e.target.value }))}
+              placeholder="446.1000"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="sa818_rx">Receive frequency (MHz)</label>
+            <input
+              id="sa818_rx"
+              type="text"
+              value={sa818Form.rxFreqMHz}
+              onChange={(e) => setSA818Form((f) => ({ ...f, rxFreqMHz: e.target.value }))}
+              placeholder="Same as transmit if left blank"
+            />
+          </div>
+        </div>
+        <div className="row">
+          <div className="field">
+            <label htmlFor="sa818_txctcss">Transmit CTCSS (0000 = none)</label>
+            <input
+              id="sa818_txctcss"
+              type="text"
+              value={sa818Form.txCTCSS}
+              onChange={(e) => setSA818Form((f) => ({ ...f, txCTCSS: e.target.value }))}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="sa818_rxctcss">Receive CTCSS (0000 = none)</label>
+            <input
+              id="sa818_rxctcss"
+              type="text"
+              value={sa818Form.rxCTCSS}
+              onChange={(e) => setSA818Form((f) => ({ ...f, rxCTCSS: e.target.value }))}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="sa818_squelch">Squelch (1-9)</label>
+            <input
+              id="sa818_squelch"
+              type="number"
+              min={1}
+              max={9}
+              value={sa818Form.squelch}
+              onChange={(e) => setSA818Form((f) => ({ ...f, squelch: Number(e.target.value) }))}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="sa818_volume">Volume (0-8)</label>
+            <input
+              id="sa818_volume"
+              type="number"
+              min={0}
+              max={8}
+              value={sa818Form.volume}
+              onChange={(e) => setSA818Form((f) => ({ ...f, volume: Number(e.target.value) }))}
+            />
+          </div>
+        </div>
+        <div className="actions">
+          <button className="primary" onClick={handleProgramSA818} disabled={programSA818.isPending}>
+            Program module
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
         <div className="label-row">
           <h2 style={{ margin: 0 }}>Nodes reported by this device</h2>
         </div>
@@ -190,10 +299,14 @@ export function DeviceDetail() {
           <Link to={`/devices/${device.id}/nodes`} className="btn">
             Manage nodes
           </Link>
+          <Link to={`/devices/${device.id}/sounds`} className="btn">
+            Manage sounds
+          </Link>
         </div>
         <p className="hint" style={{ marginTop: "1rem" }}>
-          Config editing currently covers the same fields as the local app's own Setup tab. AllStarLink network registration,
-          command/tone sets, sounds, restart/reboot, and the rest follow in later phases.
+          Node config editing covers the same fields as the local app's own Setup tab. Each node's own WX courtesy tones,
+          sound schedule, and SkywarnPlus settings are on its own edit page. AllStarLink network registration and command/tone
+          sets are not yet editable here.
         </p>
       </div>
     </div>

@@ -8,6 +8,7 @@ import { Login } from "./routes/Login";
 import { NodeEditor } from "./routes/NodeEditor";
 import { NodesList } from "./routes/NodesList";
 import { Register } from "./routes/Register";
+import { SoundsManager } from "./routes/SoundsManager";
 import { useAuth } from "./state/auth";
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -58,6 +59,14 @@ export function App() {
             element={
               <RequireAuth>
                 <NodeEditor />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/devices/:deviceId/sounds"
+            element={
+              <RequireAuth>
+                <SoundsManager />
               </RequireAuth>
             }
           />

@@ -5,6 +5,9 @@ import { useNodeLive } from "../api/nodeLive";
 import { useDeleteNode, useNode, useSaveNode, type Node } from "../api/nodes";
 import { FlashBanner } from "../components/FlashBanner";
 import { LiveDot } from "../components/LiveDot";
+import { SkywarnSection } from "../components/SkywarnSection";
+import { SoundScheduleSection } from "../components/SoundScheduleSection";
+import { WXToneSection } from "../components/WXToneSection";
 
 type FormState = Omit<Node, "number">;
 
@@ -190,9 +193,16 @@ export function NodeEditor() {
         </div>
       </form>
 
+      {!isNew && (
+        <>
+          <SoundScheduleSection deviceId={deviceId!} node={number!} />
+          <WXToneSection deviceId={deviceId!} node={number!} />
+          <SkywarnSection deviceId={deviceId!} node={number!} />
+        </>
+      )}
+
       <p className="hint" style={{ marginTop: "1.5rem" }}>
-        Command/tone sets, courtesy tones, AllStarLink network registration, sounds, and scheduling aren't editable here yet —
-        this covers the same fields as the local app's own Setup tab; the rest follow in later phases.
+        Command/tone sets and AllStarLink network registration aren't editable here yet.
       </p>
     </div>
   );
