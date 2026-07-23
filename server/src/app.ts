@@ -8,7 +8,7 @@ import cookieParser from "cookie-parser";
 import express, { type Express } from "express";
 
 import { errorHandler } from "./middleware/errorHandler.js";
-import { authRateLimiter } from "./middleware/rateLimiter.js";
+import { actionRateLimiter, authRateLimiter } from "./middleware/rateLimiter.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { devicesRouter } from "./routes/devices.routes.js";
 import { nodesRouter } from "./routes/nodes.routes.js";
@@ -29,6 +29,11 @@ export function buildApp(): Express {
   app.use(cookieParser());
 
   app.use("/api/auth", authRateLimiter, authRouter);
+  // Mounted once, ahead of every /api/devices/* router below, so it
+  // covers device management (create/rotate/revoke/delete) and every
+  // relayed action route alike -- see actionRateLimiter's own doc
+  // comment.
+  app.use("/api/devices", actionRateLimiter);
   app.use("/api/devices/:deviceId/nodes", nodesRouter);
   app.use("/api/devices/:deviceId/system", systemRouter);
   app.use("/api/devices/:deviceId/sound-schedule", soundScheduleRouter);

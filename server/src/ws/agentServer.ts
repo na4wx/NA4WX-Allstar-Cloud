@@ -7,6 +7,7 @@ import { resolveCall } from "../services/relay.js";
 import { hashAPIKey } from "../utils/apiKey.js";
 import { broadcast } from "./browserHub.js";
 import { broadcastNodeLive, resendWatchesForDevice } from "./nodeLiveHub.js";
+import { allowUpgrade } from "./upgradeRateLimiter.js";
 
 // envelope mirrors HamVoipConfigGui's own internal/cloudagent/protocol.go
 // exactly -- the one message shape carried in both directions. See that
@@ -61,6 +62,12 @@ export function attachAgentServer(server: HTTPServer): void {
   server.on("upgrade", (req, socket, head) => {
     const { pathname } = new URL(req.url ?? "", "http://localhost");
     if (pathname !== "/agent") {
+      return;
+    }
+    const ip = req.socket.remoteAddress ?? "unknown";
+    if (!allowUpgrade(ip)) {
+      socket.write("HTTP/1.1 429 Too Many Requests\r\nConnection: close\r\n\r\n");
+      socket.destroy();
       return;
     }
     wss.handleUpgrade(req, socket, head, (ws) => {

@@ -11,3 +11,17 @@ export const authRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "too many attempts, try again later" },
 });
+
+// actionRateLimiter bounds every /api/devices/* call per IP -- the
+// other half of Security section (#6)'s "auth and action endpoints".
+// Much more permissive than authRateLimiter: legitimate use already
+// polls this API repeatedly (device list refresh, node-live SSE
+// reconnects, step-up-gated retries), so this exists to blunt a flood
+// or a scripted enumeration attempt, not to bound normal usage.
+export const actionRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 120,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "too many requests, slow down" },
+});
