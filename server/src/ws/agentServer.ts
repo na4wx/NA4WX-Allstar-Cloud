@@ -6,6 +6,7 @@ import { DeviceModel, toDeviceSummary } from "../models/Device.js";
 import { resolveCall } from "../services/relay.js";
 import { hashAPIKey } from "../utils/apiKey.js";
 import { broadcast } from "./browserHub.js";
+import { broadcastNodeLive, resendWatchesForDevice } from "./nodeLiveHub.js";
 
 // envelope mirrors HamVoipConfigGui's own internal/cloudagent/protocol.go
 // exactly -- the one message shape carried in both directions. See that
@@ -92,6 +93,12 @@ export function attachAgentServer(server: HTTPServer): void {
       connections.set(deviceId, ws);
       send(ws, { type: "helloAck", ok: true });
       broadcast(deviceId, toDeviceSummary(device));
+      // The device's own live-watch state resets on every fresh
+      // connection (see internal/cloudagent/live.go's stopAll) -- if a
+      // browser tab already has this node's live view open across a
+      // reconnect, it never re-subscribes on its own, so re-arm
+      // whatever's still actually being watched.
+      resendWatchesForDevice(deviceId);
 
       ws.on("message", (raw2) => handleMessage(deviceId as string, raw2));
       ws.on("close", () => handleClose(deviceId as string));
@@ -118,6 +125,11 @@ async function handleMessage(deviceId: string, raw: import("ws").RawData): Promi
     device.status = "online";
     await device.save();
     broadcast(deviceId, toDeviceSummary(device));
+    return;
+  }
+
+  if (msg.type === "event" && msg.event === "nodeLive" && msg.node) {
+    broadcastNodeLive(deviceId, msg.node, msg.data);
     return;
   }
 

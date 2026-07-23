@@ -1,8 +1,10 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
+import { useNodeLive } from "../api/nodeLive";
 import { useDeleteNode, useNode, useSaveNode, type Node } from "../api/nodes";
 import { FlashBanner } from "../components/FlashBanner";
+import { LiveDot } from "../components/LiveDot";
 
 type FormState = Omit<Node, "number">;
 
@@ -47,6 +49,7 @@ export function NodeEditor() {
   }, [existing]);
 
   const isNew = isError; // 404 from useNode means this number doesn't exist yet
+  const { live, connected: liveConnected } = useNodeLive(deviceId!, number!);
 
   const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -83,6 +86,34 @@ export function NodeEditor() {
         Node {number} {isNew && <span className="tag">new</span>}
       </h1>
       {flash && <FlashBanner kind={flash.kind} message={flash.message} />}
+
+      {!isNew && (
+        <div className="card">
+          <div className="live-head">
+            <h2 style={{ margin: 0 }}>
+              <LiveDot on={liveConnected} /> Right now
+            </h2>
+            {live && <span className={`status-pill ${live.receiving ? "up" : ""}`}>{live.receiving ? "Receiving" : "Idle"}</span>}
+          </div>
+          {!live && <p className="hint">Waiting for the device to report this node's live state…</p>}
+          {live && (
+            <>
+              {live.connected.length === 0 && <p className="hint">Not connected to any other node right now.</p>}
+              {live.connected.length > 0 && (
+                <div className="row">
+                  {live.connected.map((c) => (
+                    <span key={c.number} className="node-chip">
+                      <span className="tag">{c.number}</span>
+                      {c.callsign && <span className="node-call">{c.callsign}</span>}
+                      {c.keyed && <span className="talking-badge">TX</span>}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit}>
         <div className="card">

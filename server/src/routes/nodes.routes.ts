@@ -3,6 +3,7 @@ import { Router, type Request } from "express";
 import { requireAuth } from "../auth/middleware.js";
 import { authorizeDevice } from "../middleware/authorizeDevice.js";
 import { sendAction } from "../services/relay.js";
+import { subscribeNode } from "../ws/nodeLiveHub.js";
 
 // nodesRouter is mounted at /api/devices/:deviceId/nodes (mergeParams:
 // true so :deviceId from the parent path is visible here) -- every
@@ -44,4 +45,31 @@ nodesRouter.put("/:number", async (req: NodeParams, res) => {
 nodesRouter.delete("/:number", async (req: NodeParams, res) => {
   await sendAction(req.params.deviceId, "config.deleteNode", { number: req.params.number });
   res.status(204).end();
+});
+
+// GET /:number/live streams this node's moment-to-moment repeater state
+// (connected nodes, receiving) as Server-Sent Events. Subscribing here
+// is what actually makes the device start polling that node at all --
+// see nodeLiveHub's own doc comment for the two-tier design this
+// implements (cheap always-on device heartbeat vs. this, an expensive
+// per-node poll that only runs while someone is watching).
+nodesRouter.get("/:number/live", (req: NodeParams, res) => {
+  const { deviceId, number } = req.params as { deviceId: string; number: string };
+
+  res.setHeader("Content-Type", "text/event-stream");
+  res.setHeader("Cache-Control", "no-cache");
+  res.setHeader("Connection", "keep-alive");
+  res.flushHeaders();
+
+  const send = (data: unknown) => {
+    res.write(`event: live\ndata: ${JSON.stringify(data)}\n\n`);
+  };
+
+  const unsubscribe = subscribeNode(deviceId, number, send);
+  const keepalive = setInterval(() => res.write(": keepalive\n\n"), 25_000);
+
+  req.on("close", () => {
+    clearInterval(keepalive);
+    unsubscribe();
+  });
 });
