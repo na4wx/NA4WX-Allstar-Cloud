@@ -4,10 +4,26 @@ import { useDeleteSoundSchedule, useSaveSoundSchedule, useSoundSchedule } from "
 import { useSounds } from "../api/sounds";
 import { FlashBanner } from "./FlashBanner";
 
+const weekdayOptions = [
+  { value: 0, label: "Sun" },
+  { value: 1, label: "Mon" },
+  { value: 2, label: "Tue" },
+  { value: 3, label: "Wed" },
+  { value: 4, label: "Thu" },
+  { value: 5, label: "Fri" },
+  { value: 6, label: "Sat" },
+];
+const weekdayLabelByValue = new Map(weekdayOptions.map((w) => [w.value, w.label]));
+
 // SoundScheduleSection manages one node's scheduled sound-playback
 // entries -- see internal/soundschedule's package doc. Minute/hour/day
 // fields use plain cron-style text ("*" or a number) rather than a
-// picker, matching how app_rpt's own scheduler fields work.
+// picker, matching how app_rpt's own scheduler fields work. Days of
+// week are a real multi-select list here (unlike the native
+// "Scheduled connections" scheduler, which fans one weekday per entry)
+// -- see internal/soundschedule.Entry's own doc comment for why: this
+// is this app's own format, not constrained by app_rpt's schedule-stanza
+// syntax.
 export function SoundScheduleSection({ deviceId, node }: { deviceId: string; node: string }) {
   const { data: entries, isLoading, error } = useSoundSchedule(deviceId, node);
   const save = useSaveSoundSchedule(deviceId, node);
@@ -20,15 +36,21 @@ export function SoundScheduleSection({ deviceId, node }: { deviceId: string; nod
   const [hour, setHour] = useState("*");
   const [dayOfMonth, setDayOfMonth] = useState("*");
   const [month, setMonth] = useState("*");
+  const [daysOfWeek, setDaysOfWeek] = useState<number[]>([]);
   const [flash, setFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
+
+  const toggleWeekday = (value: number) => {
+    setDaysOfWeek((d) => (d.includes(value) ? d.filter((w) => w !== value) : [...d, value]));
+  };
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
     setFlash(null);
     try {
-      await save.mutateAsync({ node, file, reach, minute, hour, day_of_month: dayOfMonth, month });
+      await save.mutateAsync({ node, file, reach, minute, hour, day_of_month: dayOfMonth, month, days_of_week: daysOfWeek });
       setFlash({ kind: "ok", message: "Schedule entry saved." });
       setFile("");
+      setDaysOfWeek([]);
     } catch (err) {
       setFlash({ kind: "error", message: err instanceof Error ? err.message : "save failed" });
     }
@@ -52,6 +74,7 @@ export function SoundScheduleSection({ deviceId, node }: { deviceId: string; nod
               <th>Hour</th>
               <th>Day</th>
               <th>Month</th>
+              <th>Days of week</th>
               <th></th>
             </tr>
           </thead>
@@ -64,6 +87,7 @@ export function SoundScheduleSection({ deviceId, node }: { deviceId: string; nod
                 <td>{entry.hour}</td>
                 <td>{entry.day_of_month}</td>
                 <td>{entry.month}</td>
+                <td>{entry.days_of_week && entry.days_of_week.length > 0 ? entry.days_of_week.map((d) => weekdayLabelByValue.get(d)).join(", ") : "Every day"}</td>
                 <td>
                   <button className="danger" onClick={() => del.mutate(entry.id)}>
                     Delete
@@ -113,6 +137,17 @@ export function SoundScheduleSection({ deviceId, node }: { deviceId: string; nod
           <div className="field">
             <label htmlFor="sched_month">Month</label>
             <input id="sched_month" type="text" value={month} onChange={(e) => setMonth(e.target.value)} placeholder="*" />
+          </div>
+        </div>
+        <div className="field">
+          <label>Days of week (none selected = every day)</label>
+          <div className="row">
+            {weekdayOptions.map((wd) => (
+              <label key={wd.value} style={{ display: "flex", alignItems: "center", gap: "0.3rem", flex: "none" }}>
+                <input type="checkbox" checked={daysOfWeek.includes(wd.value)} onChange={() => toggleWeekday(wd.value)} />
+                {wd.label}
+              </label>
+            ))}
           </div>
         </div>
         <div className="actions">
