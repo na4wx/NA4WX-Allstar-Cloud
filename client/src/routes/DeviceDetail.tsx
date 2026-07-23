@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useProgramSA818, type SA818Settings } from "../api/sa818";
-import { getAccessToken } from "../api/client";
+import { apiUrl, getAccessToken } from "../api/client";
 import {
   useDeleteDevice,
   useDevice,
@@ -60,7 +60,7 @@ export function DeviceDetail() {
     // doc comment on the server for why that's an accepted, narrow
     // exception rather than the general auth pattern.
     const token = getAccessToken();
-    const url = `/api/devices/${id}/live${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+    const url = apiUrl(`/api/devices/${id}/live${token ? `?token=${encodeURIComponent(token)}` : ""}`);
     const source = new EventSource(url);
 
     source.addEventListener("open", () => setLive(true));

@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-import { apiFetch, registerAuthFailureHandler, setAccessToken } from "../api/client";
+import { apiFetch, apiUrl, registerAuthFailureHandler, setAccessToken } from "../api/client";
 import { clearStepUpCache } from "../api/stepUp";
 
 interface AuthState {
@@ -30,7 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // the session without the operator re-entering a password.
     (async () => {
       try {
-        const res = await fetch("/api/auth/refresh", { method: "POST", credentials: "include" });
+        const res = await fetch(apiUrl("/api/auth/refresh"), { method: "POST", credentials: "include" });
         if (res.ok) {
           const data = (await res.json()) as { accessToken: string };
           setAccessToken(data.accessToken);

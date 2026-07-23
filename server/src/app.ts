@@ -5,8 +5,10 @@
 import "express-async-errors";
 
 import cookieParser from "cookie-parser";
+import cors from "cors";
 import express, { type Express } from "express";
 
+import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { actionRateLimiter, authRateLimiter } from "./middleware/rateLimiter.js";
 import { authRouter } from "./routes/auth.routes.js";
@@ -27,6 +29,15 @@ export function buildApp(): Express {
   // tone/station-ID clip this app expects.
   app.use(express.json({ limit: "10mb" }));
   app.use(cookieParser());
+
+  // Only mounted when the client is served from a different origin
+  // than this API (see env.clientOrigin's own doc comment) -- credentials:
+  // true is required since the refresh-token cookie and the
+  // X-Step-Up-Token/Authorization headers all need to survive a
+  // cross-origin fetch(..., { credentials: "include" }).
+  if (env.clientOrigin) {
+    app.use(cors({ origin: env.clientOrigin, credentials: true }));
+  }
 
   app.use("/api/auth", authRateLimiter, authRouter);
   // Mounted once, ahead of every /api/devices/* router below, so it

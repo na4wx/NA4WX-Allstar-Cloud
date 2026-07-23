@@ -15,4 +15,12 @@ export default defineConfig({
       },
     },
   },
+  // preview (not dev) is what actually runs in production via pm2 --
+  // Vite refuses requests whose Host header it doesn't recognize
+  // unless the host is listed here. Add every hostname this is served
+  // as (the reverse proxy's public domain, not localhost) here.
+  preview: {
+    host: "0.0.0.0",
+    allowedHosts: ["allstar.na4wx.com"],
+  },
 });

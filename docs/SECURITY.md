@@ -115,6 +115,34 @@ at all does not, by itself, expose either of these.
   proxy / load balancer in front of the Node process (this repo doesn't
   implement TLS itself) — standard for a Node/Express deployment.
 
+### Cross-origin deployment (client and API on separate origins)
+
+The default, recommended deployment puts the client and API behind one
+origin (a reverse proxy forwarding `/api` and `/agent` to the API
+process — see `ecosystem.config.js`'s comments) — no CORS
+configuration needed at all, and no risk of getting it wrong.
+
+If instead the client is served from its own subdomain (e.g.
+`allstar.example.com`) separate from the API (`api-allstar.example.com`),
+two things must both be set, or the client silently can't reach the API:
+
+- Server: `CLIENT_ORIGIN=https://allstar.example.com` (`.env`) — enables
+  `cors()` (`app.ts`) for exactly that one origin, with credentials, so
+  the refresh-token cookie and `Authorization`/`X-Step-Up-Token` headers
+  all survive the cross-origin `fetch(..., { credentials: "include" })`
+  calls `api/client.ts` already makes.
+- Client: `VITE_API_BASE_URL=https://api-allstar.example.com`
+  (`client/.env`, **baked in at `vite build` time** — changing it means
+  rebuilding, not just restarting) — every relative `/api/...` path and
+  SSE `EventSource` URL resolves against this instead of the page's own
+  origin (`api/client.ts`'s `apiUrl`).
+
+The refresh-token cookie itself needs no special `SameSite`/`domain`
+handling for this split, as long as both are subdomains of the same
+registrable domain (e.g. both under `example.com`) — that makes the
+cross-subdomain fetch same-site, not cross-site, so the existing
+`SameSite=Lax` cookie is still sent.
+
 ## 8. Audit logging (both sides, independent)
 
 - **Cloud side**: `AuditLogModel` (`server/src/models/AuditLog.ts`) —

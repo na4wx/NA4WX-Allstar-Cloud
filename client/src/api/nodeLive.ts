@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import { getAccessToken } from "./client";
+import { apiUrl, getAccessToken } from "./client";
 
 export interface ConnectedNode {
   number: string;
@@ -26,7 +26,7 @@ export function useNodeLive(deviceId: string, number: string): { live: NodeLiveS
 
   useEffect(() => {
     const token = getAccessToken();
-    const url = `/api/devices/${deviceId}/nodes/${number}/live${token ? `?token=${encodeURIComponent(token)}` : ""}`;
+    const url = apiUrl(`/api/devices/${deviceId}/nodes/${number}/live${token ? `?token=${encodeURIComponent(token)}` : ""}`);
     const source = new EventSource(url);
 
     source.addEventListener("open", () => setConnected(true));
