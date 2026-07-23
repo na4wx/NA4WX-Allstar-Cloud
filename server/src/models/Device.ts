@@ -30,6 +30,14 @@ const deviceSchema = new Schema({
   apiKeyHash: { type: String, required: true, unique: true, index: true },
   apiKeyHint: { type: String, required: true },
 
+  // enabled gates the hello handshake independently of apiKeyHash (see
+  // ws/agentServer.ts) -- "Revoke" in the device settings sets this
+  // false without deleting the device or its audit history, and
+  // immediately disconnects any live session; "Rotate key" flips it
+  // back to true alongside issuing a new key. See the Go app's plan
+  // doc's Security section (#9).
+  enabled: { type: Boolean, default: true },
+
   status: { type: String, enum: ["online", "offline"], default: "offline" },
   lastSeenAt: { type: Date, default: null },
   lastStatus: { type: Schema.Types.Mixed, default: null },
@@ -51,6 +59,7 @@ export function toDeviceSummary(device: InstanceType<typeof DeviceModel>) {
     id: String(device._id),
     name: device.name,
     apiKeyHint: device.apiKeyHint,
+    enabled: device.enabled,
     status: device.status,
     lastSeenAt: device.lastSeenAt,
     lastStatus: device.lastStatus,

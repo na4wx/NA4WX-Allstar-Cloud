@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
 import { useCreateDevice, useDeleteDevice, useDevices, type DeviceWithKey } from "../api/devices";
+import { StepUpCancelledError, ensureStepUp } from "../api/stepUp";
 import { StatusPill } from "../components/StatusPill";
 
 export function DevicesList() {
@@ -10,6 +11,7 @@ export function DevicesList() {
   const deleteDevice = useDeleteDevice();
   const [name, setName] = useState("");
   const [justCreated, setJustCreated] = useState<DeviceWithKey | null>(null);
+  const [listError, setListError] = useState<string | null>(null);
 
   const handleCreate = async (e: FormEvent) => {
     e.preventDefault();
@@ -18,11 +20,20 @@ export function DevicesList() {
     setName("");
   };
 
-  const handleDelete = (id: string, deviceName: string) => {
+  const handleDelete = async (id: string, deviceName: string) => {
     if (!confirm(`Remove "${deviceName}"? Its API key will stop working immediately.`)) {
       return;
     }
-    deleteDevice.mutate(id);
+    setListError(null);
+    try {
+      const stepUpToken = await ensureStepUp();
+      await deleteDevice.mutateAsync({ id, stepUpToken });
+    } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
+      setListError(err instanceof Error ? err.message : "remove failed");
+    }
   };
 
   return (
@@ -67,6 +78,7 @@ export function DevicesList() {
         <h2>Devices</h2>
         {isLoading && <p className="hint">Loading…</p>}
         {error && <div className="flash error">{(error as Error).message}</div>}
+        {listError && <div className="flash error">{listError}</div>}
         {devices && devices.length === 0 && <p className="hint">No devices yet — add one above.</p>}
         {devices && devices.length > 0 && (
           <div className="table-scroll">
@@ -88,6 +100,7 @@ export function DevicesList() {
                     </td>
                     <td>
                       <StatusPill status={d.status} />
+                      {!d.enabled && <span className="tag" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>revoked</span>}
                     </td>
                     <td>{d.nodes.length ? d.nodes.map((n) => <span key={n.number} className="tag">{n.number}</span>) : <span className="muted">none reported</span>}</td>
                     <td className="muted">…{d.apiKeyHint}</td>

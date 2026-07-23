@@ -45,3 +45,32 @@ export function generateRefreshToken(): string {
 export function hashRefreshToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
+
+// stepUpTokenTTL is deliberately much shorter than the access token's
+// own 15 minutes -- see the Go app's plan doc's Security section (#5):
+// the highest-risk actions (reboot, restart-asterisk, raw config write,
+// key rotation, device delete) require re-proving the account password
+// shortly before each one, not just holding a valid session.
+const stepUpTokenTTL = "5m";
+
+interface StepUpTokenPayload {
+  sub: string; // user id
+  stepUp: true;
+}
+
+export function signStepUpToken(userId: string): string {
+  return jwt.sign({ sub: userId, stepUp: true } satisfies StepUpTokenPayload, env.jwtSecret, { expiresIn: stepUpTokenTTL });
+}
+
+// verifyStepUpToken checks both the signature/expiry and that the token
+// was issued for this exact userId and carries the stepUp claim -- a
+// plain access token (no stepUp claim) must never satisfy this check,
+// even though both are signed with the same secret.
+export function verifyStepUpToken(token: string, userId: string): boolean {
+  try {
+    const payload = jwt.verify(token, env.jwtSecret) as Partial<StepUpTokenPayload>;
+    return payload.stepUp === true && payload.sub === userId;
+  } catch {
+    return false;
+  }
+}

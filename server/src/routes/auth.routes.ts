@@ -2,7 +2,7 @@ import { Router, type Response } from "express";
 
 import { env } from "../config/env.js";
 import { hashPassword, verifyPassword } from "../auth/password.js";
-import { generateRefreshToken, hashRefreshToken, refreshTokenTTLMs, signAccessToken } from "../auth/jwt.js";
+import { generateRefreshToken, hashRefreshToken, refreshTokenTTLMs, signAccessToken, signStepUpToken } from "../auth/jwt.js";
 import { requireAuth } from "../auth/middleware.js";
 import { SessionModel } from "../models/Session.js";
 import { UserModel } from "../models/User.js";
@@ -101,6 +101,21 @@ authRouter.post("/logout", async (req, res) => {
   }
   res.clearCookie(refreshCookieName, { path: refreshCookiePath });
   res.status(204).end();
+});
+
+// POST /api/auth/step-up re-checks the account password and, if it
+// matches, issues a short-lived step-up token (see auth/jwt.ts) the
+// client attaches to the one request it's for via the X-Step-Up-Token
+// header -- see middleware/stepUpAuth.ts for the routes this gates.
+authRouter.post("/step-up", requireAuth, async (req, res) => {
+  const password = String(req.body?.password ?? "");
+  const user = await UserModel.findById(req.userId);
+  const passwordOk = await verifyPassword(password, user?.passwordHash ?? "$2a$12$invalidinvalidinvalidinvalidinvalidinvalid");
+  if (!user || !passwordOk) {
+    res.status(401).json({ error: "incorrect password" });
+    return;
+  }
+  res.json({ stepUpToken: signStepUpToken(String(user._id)) });
 });
 
 authRouter.get("/me", requireAuth, async (req, res) => {

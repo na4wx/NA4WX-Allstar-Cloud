@@ -35,6 +35,17 @@ export function getConnection(deviceId: string): WebSocket | undefined {
   return connections.get(deviceId);
 }
 
+// disconnectDevice forcibly closes deviceId's live connection, if any --
+// called from routes/devices.routes.ts when an operator rotates or
+// revokes a device's API key, so the change takes effect immediately
+// rather than only the next time the device happens to reconnect (the
+// stale key it's still holding won't pass the hello check on its next
+// attempt). ws's own "close" handler (see handleClose below) takes care
+// of flipping the device to offline and notifying any open browser.
+export function disconnectDevice(deviceId: string): void {
+  connections.get(deviceId)?.close(1000, "device key changed");
+}
+
 function send(ws: WebSocket, msg: Envelope): void {
   ws.send(JSON.stringify(msg));
 }
@@ -77,6 +88,11 @@ export function attachAgentServer(server: HTTPServer): void {
       const device = await DeviceModel.findOne({ apiKeyHash: hashAPIKey(hello.apiKey) });
       if (!device) {
         send(ws, { type: "helloAck", ok: false, error: "invalid API key" });
+        ws.close();
+        return;
+      }
+      if (!device.enabled) {
+        send(ws, { type: "helloAck", ok: false, error: "this device has been revoked" });
         ws.close();
         return;
       }

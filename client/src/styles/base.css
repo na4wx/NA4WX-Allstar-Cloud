@@ -250,3 +250,21 @@ table th { color: var(--text-dim); font-weight: 550; font-size: 0.86rem; }
 }
 @keyframes talking-pulse { 50% { opacity: 0.55; } }
 @media (prefers-reduced-motion: reduce) { .talking-badge { animation: none; } }
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: color-mix(in srgb, #000 45%, transparent);
+}
+.modal {
+  width: 100%;
+  max-width: 380px;
+  margin: 0;
+  box-shadow: var(--shadow-lg);
+}
+.modal .field:last-of-type { margin-bottom: 0; }

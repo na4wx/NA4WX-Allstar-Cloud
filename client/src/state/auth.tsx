@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
 import { apiFetch, registerAuthFailureHandler, setAccessToken } from "../api/client";
+import { clearStepUpCache } from "../api/stepUp";
 
 interface AuthState {
   email: string | null;
@@ -20,6 +21,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     registerAuthFailureHandler(() => {
       setAccessToken(null);
       setEmail(null);
+      clearStepUpCache();
     });
 
     // Silent refresh on first load: the access token only ever lives in
@@ -63,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await apiFetch("/api/auth/logout", { method: "POST" });
     setAccessToken(null);
     setEmail(null);
+    clearStepUpCache();
   };
 
   return <AuthContext.Provider value={{ email, loading, login, register, logout }}>{children}</AuthContext.Provider>;

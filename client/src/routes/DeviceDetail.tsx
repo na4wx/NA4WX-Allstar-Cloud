@@ -1,11 +1,20 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import { useProgramSA818, type SA818Settings } from "../api/sa818";
 import { getAccessToken } from "../api/client";
-import { useDevice, type Device } from "../api/devices";
+import {
+  useDeleteDevice,
+  useDevice,
+  useReactivateDevice,
+  useRevokeDevice,
+  useRotateDeviceKey,
+  type Device,
+  type DeviceWithKey,
+} from "../api/devices";
 import { useReboot, useRestartAsterisk } from "../api/system";
+import { StepUpCancelledError, ensureStepUp } from "../api/stepUp";
 import { FlashBanner } from "../components/FlashBanner";
 import { LiveDot } from "../components/LiveDot";
 import { StatusPill } from "../components/StatusPill";
@@ -25,6 +34,7 @@ const blankSA818: SA818Settings = {
 
 export function DeviceDetail() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { data: device, isLoading, error } = useDevice(id!);
   const queryClient = useQueryClient();
   const [live, setLive] = useState(false);
@@ -34,6 +44,12 @@ export function DeviceDetail() {
   const programSA818 = useProgramSA818(id!);
   const [sa818Form, setSA818Form] = useState<SA818Settings>(blankSA818);
   const [sa818Flash, setSA818Flash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
+  const rotateKey = useRotateDeviceKey();
+  const revokeDevice = useRevokeDevice();
+  const reactivateDevice = useReactivateDevice();
+  const deleteDevice = useDeleteDevice();
+  const [securityFlash, setSecurityFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
+  const [rotatedKey, setRotatedKey] = useState<DeviceWithKey | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -63,9 +79,13 @@ export function DeviceDetail() {
     }
     setSystemFlash(null);
     try {
-      await restartAsterisk.mutateAsync();
+      const stepUpToken = await ensureStepUp();
+      await restartAsterisk.mutateAsync(stepUpToken);
       setSystemFlash({ kind: "ok", message: "Asterisk restarted." });
     } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
       setSystemFlash({ kind: "error", message: err instanceof Error ? err.message : "restart failed" });
     }
   };
@@ -76,10 +96,75 @@ export function DeviceDetail() {
     }
     setSystemFlash(null);
     try {
-      await reboot.mutateAsync();
+      const stepUpToken = await ensureStepUp();
+      await reboot.mutateAsync(stepUpToken);
       setSystemFlash({ kind: "ok", message: "Rebooting now — this device will stop responding shortly." });
     } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
       setSystemFlash({ kind: "error", message: err instanceof Error ? err.message : "reboot failed" });
+    }
+  };
+
+  const handleRotateKey = async () => {
+    if (!confirm(`Rotate the API key for ${device?.name}? The old key stops working immediately, and this device will disconnect until it's given the new one.`)) {
+      return;
+    }
+    setSecurityFlash(null);
+    try {
+      const stepUpToken = await ensureStepUp();
+      const result = await rotateKey.mutateAsync({ id: id!, stepUpToken });
+      setRotatedKey(result);
+    } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
+      setSecurityFlash({ kind: "error", message: err instanceof Error ? err.message : "key rotation failed" });
+    }
+  };
+
+  const handleRevoke = async () => {
+    if (!confirm(`Revoke ${device?.name}? It will disconnect immediately and won't be able to reconnect until reactivated or given a new key.`)) {
+      return;
+    }
+    setSecurityFlash(null);
+    try {
+      const stepUpToken = await ensureStepUp();
+      await revokeDevice.mutateAsync({ id: id!, stepUpToken });
+      setSecurityFlash({ kind: "ok", message: "Device revoked — it can no longer connect." });
+    } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
+      setSecurityFlash({ kind: "error", message: err instanceof Error ? err.message : "revoke failed" });
+    }
+  };
+
+  const handleReactivate = async () => {
+    setSecurityFlash(null);
+    try {
+      await reactivateDevice.mutateAsync(id!);
+      setSecurityFlash({ kind: "ok", message: "Device reactivated — it can connect again with its existing key." });
+    } catch (err) {
+      setSecurityFlash({ kind: "error", message: err instanceof Error ? err.message : "reactivate failed" });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!confirm(`Remove "${device?.name}"? Its API key will stop working immediately, and this can't be undone.`)) {
+      return;
+    }
+    setSecurityFlash(null);
+    try {
+      const stepUpToken = await ensureStepUp();
+      await deleteDevice.mutateAsync({ id: id!, stepUpToken });
+      navigate("/");
+    } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
+      setSecurityFlash({ kind: "error", message: err instanceof Error ? err.message : "remove failed" });
     }
   };
 
@@ -130,6 +215,67 @@ export function DeviceDetail() {
             <div className="value">…{device.apiKeyHint}</div>
           </div>
         </div>
+        {!device.enabled && <div className="flash error" style={{ marginTop: "1.25rem", marginBottom: 0 }}>This device is revoked and cannot connect.</div>}
+      </div>
+
+      <div className="card">
+        <h2>Security</h2>
+        {rotatedKey && (
+          <div className="card" style={{ borderColor: "var(--accent)", marginBottom: "1.25rem" }}>
+            <h2>New API key generated</h2>
+            <p>
+              Copy this now — it won't be shown again. Paste it into <strong>{rotatedKey.name}</strong>'s own Cloud Sync
+              settings card (System page) on the node itself; the old key no longer works.
+            </p>
+            <pre className="raw-block" style={{ userSelect: "all" }}>
+              {rotatedKey.apiKey}
+            </pre>
+            <div className="actions">
+              <button onClick={() => setRotatedKey(null)}>Done</button>
+            </div>
+          </div>
+        )}
+        {securityFlash && <FlashBanner kind={securityFlash.kind} message={securityFlash.message} />}
+        <div className="row">
+          <div className="field" style={{ flex: "none" }}>
+            <div className="label-row">
+              <span className="muted">Issue a new key; the old one stops working immediately</span>
+            </div>
+            <button onClick={handleRotateKey} disabled={rotateKey.isPending}>
+              Rotate API key
+            </button>
+          </div>
+          {device.enabled ? (
+            <div className="field" style={{ flex: "none" }}>
+              <div className="label-row">
+                <span className="muted">Disconnect and block reconnection, without deleting anything</span>
+              </div>
+              <button className="danger" onClick={handleRevoke} disabled={revokeDevice.isPending}>
+                Revoke device
+              </button>
+            </div>
+          ) : (
+            <div className="field" style={{ flex: "none" }}>
+              <div className="label-row">
+                <span className="muted">Allow this device to reconnect with its existing key</span>
+              </div>
+              <button onClick={handleReactivate} disabled={reactivateDevice.isPending}>
+                Reactivate device
+              </button>
+            </div>
+          )}
+          <div className="field" style={{ flex: "none" }}>
+            <div className="label-row">
+              <span className="muted">Permanently remove this device</span>
+            </div>
+            <button className="danger" onClick={handleDelete} disabled={deleteDevice.isPending}>
+              Delete device
+            </button>
+          </div>
+        </div>
+        <p className="hint" style={{ marginTop: "1rem" }}>
+          These all require re-entering your password.
+        </p>
       </div>
 
       <div className="card">

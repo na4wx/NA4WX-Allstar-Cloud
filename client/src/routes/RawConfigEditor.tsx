@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import { useAddRawConfigKey, useAddRawConfigSection, useRawConfigFile, useRawConfigFiles, useSetRawConfigKey } from "../api/rawconfig";
+import { StepUpCancelledError, ensureStepUp } from "../api/stepUp";
 import { FlashBanner } from "../components/FlashBanner";
 
 // RawConfigEditor is a direct port of the local Go app's own Raw Config
@@ -30,9 +31,13 @@ export function RawConfigEditor() {
     }
     setFlash(null);
     try {
-      await setKey.mutateAsync({ section, index, value });
+      const stepUpToken = await ensureStepUp();
+      await setKey.mutateAsync({ section, index, value, stepUpToken });
       setFlash({ kind: "ok", message: "Saved." });
     } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
       setFlash({ kind: "error", message: err instanceof Error ? err.message : "save failed" });
     }
   };
@@ -40,11 +45,15 @@ export function RawConfigEditor() {
   const handleAddKey = async () => {
     setFlash(null);
     try {
-      await addKey.mutateAsync({ section: newKeySection, key: newKeyName, value: newKeyValue });
+      const stepUpToken = await ensureStepUp();
+      await addKey.mutateAsync({ section: newKeySection, key: newKeyName, value: newKeyValue, stepUpToken });
       setFlash({ kind: "ok", message: "Key added." });
       setNewKeyName("");
       setNewKeyValue("");
     } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
       setFlash({ kind: "error", message: err instanceof Error ? err.message : "failed" });
     }
   };
@@ -52,10 +61,14 @@ export function RawConfigEditor() {
   const handleAddSection = async () => {
     setFlash(null);
     try {
-      await addSection.mutateAsync(newSectionName);
+      const stepUpToken = await ensureStepUp();
+      await addSection.mutateAsync({ section: newSectionName, stepUpToken });
       setFlash({ kind: "ok", message: "Section added." });
       setNewSectionName("");
     } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
       setFlash({ kind: "error", message: err instanceof Error ? err.message : "failed" });
     }
   };

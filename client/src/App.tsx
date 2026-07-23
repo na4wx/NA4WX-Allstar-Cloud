@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
+import { StepUpPrompt } from "./components/StepUpPrompt";
 import { TopNav } from "./components/TopNav";
 import { DeviceDetail } from "./routes/DeviceDetail";
 import { DevicesList } from "./routes/DevicesList";
@@ -27,6 +28,7 @@ export function App() {
   return (
     <>
       <TopNav />
+      <StepUpPrompt />
       <main>
         <Routes>
           <Route path="/login" element={<Login />} />
