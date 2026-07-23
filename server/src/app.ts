@@ -24,6 +24,19 @@ import { wxtoneRouter } from "./routes/wxtone.routes.js";
 
 export function buildApp(): Express {
   const app = express();
+  // This process always sits behind exactly one reverse proxy
+  // (cloudflared, nginx, or similar) in every real deployment -- it
+  // never listens on a public interface directly. Without this,
+  // express-rate-limit refuses to run at all the moment it sees an
+  // X-Forwarded-For header with trust proxy still at Express's default
+  // of false (ERR_ERL_UNEXPECTED_X_FORWARDED_FOR), since blindly
+  // trusting a client-supplied header for rate-limit bucketing would
+  // let anyone spoof their way around the limit. "1" tells Express to
+  // trust exactly the one hop closest to this process (the proxy) and
+  // take the client IP from the next entry in X-Forwarded-For -- the
+  // right value for a single reverse proxy in front, wrong (too
+  // permissive) if there's ever a longer chain.
+  app.set("trust proxy", 1);
   // Default 100kb is too small for a base64-encoded audio upload (see
   // sounds.routes.ts) -- 10mb comfortably covers any single courtesy
   // tone/station-ID clip this app expects.
