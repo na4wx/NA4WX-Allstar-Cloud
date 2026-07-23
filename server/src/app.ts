@@ -12,6 +12,7 @@ import { authRateLimiter } from "./middleware/rateLimiter.js";
 import { authRouter } from "./routes/auth.routes.js";
 import { devicesRouter } from "./routes/devices.routes.js";
 import { nodesRouter } from "./routes/nodes.routes.js";
+import { rawconfigRouter } from "./routes/rawconfig.routes.js";
 import { sa818Router } from "./routes/sa818.routes.js";
 import { skywarnplusRouter } from "./routes/skywarnplus.routes.js";
 import { soundScheduleRouter } from "./routes/soundSchedule.routes.js";
@@ -35,6 +36,7 @@ export function buildApp(): Express {
   app.use("/api/devices/:deviceId/sa818", sa818Router);
   app.use("/api/devices/:deviceId/skywarn", skywarnplusRouter);
   app.use("/api/devices/:deviceId/sounds", soundsRouter);
+  app.use("/api/devices/:deviceId/rawconfig", rawconfigRouter);
   app.use("/api/devices", devicesRouter);
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));

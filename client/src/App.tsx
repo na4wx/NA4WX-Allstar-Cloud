@@ -7,6 +7,7 @@ import { DevicesList } from "./routes/DevicesList";
 import { Login } from "./routes/Login";
 import { NodeEditor } from "./routes/NodeEditor";
 import { NodesList } from "./routes/NodesList";
+import { RawConfigEditor } from "./routes/RawConfigEditor";
 import { Register } from "./routes/Register";
 import { SoundsManager } from "./routes/SoundsManager";
 import { useAuth } from "./state/auth";
@@ -67,6 +68,14 @@ export function App() {
             element={
               <RequireAuth>
                 <SoundsManager />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/devices/:deviceId/rawconfig"
+            element={
+              <RequireAuth>
+                <RawConfigEditor />
               </RequireAuth>
             }
           />

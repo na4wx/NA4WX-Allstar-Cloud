@@ -302,6 +302,9 @@ export function DeviceDetail() {
           <Link to={`/devices/${device.id}/sounds`} className="btn">
             Manage sounds
           </Link>
+          <Link to={`/devices/${device.id}/rawconfig`} className="btn danger">
+            Raw config
+          </Link>
         </div>
         <p className="hint" style={{ marginTop: "1rem" }}>
           Node config editing covers the same fields as the local app's own Setup tab. Each node's own WX courtesy tones,
