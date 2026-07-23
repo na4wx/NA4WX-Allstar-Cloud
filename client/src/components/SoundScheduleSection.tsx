@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 import { useDeleteSoundSchedule, useSaveSoundSchedule, useSoundSchedule } from "../api/soundSchedule";
+import { useSounds } from "../api/sounds";
 import { FlashBanner } from "./FlashBanner";
 
 // SoundScheduleSection manages one node's scheduled sound-playback
@@ -11,6 +12,7 @@ export function SoundScheduleSection({ deviceId, node }: { deviceId: string; nod
   const { data: entries, isLoading, error } = useSoundSchedule(deviceId, node);
   const save = useSaveSoundSchedule(deviceId, node);
   const del = useDeleteSoundSchedule(deviceId, node);
+  const { data: sounds } = useSounds(deviceId);
 
   const [file, setFile] = useState("");
   const [reach, setReach] = useState<"local" | "network">("local");
@@ -77,7 +79,15 @@ export function SoundScheduleSection({ deviceId, node }: { deviceId: string; nod
         <div className="row">
           <div className="field">
             <label htmlFor="sched_file">Sound file</label>
-            <input id="sched_file" type="text" value={file} onChange={(e) => setFile(e.target.value)} required />
+            <select id="sched_file" value={file} onChange={(e) => setFile(e.target.value)} required>
+              <option value="">Choose a sound file</option>
+              {sounds?.map((s) => (
+                <option key={s.ref} value={s.ref}>
+                  {s.name}
+                  {!s.custom && " (built-in)"}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
             <label htmlFor="sched_reach">Reach</label>
