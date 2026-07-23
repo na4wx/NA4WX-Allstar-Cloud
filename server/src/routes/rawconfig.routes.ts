@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 
 import { requireAuth } from "../auth/middleware.js";
 import { authorizeDevice } from "../middleware/authorizeDevice.js";
-import { sendAction } from "../services/relay.js";
+import { auditedSendAction } from "../middleware/auditLogger.js";
 
 // rawconfigRouter is mounted at /api/devices/:deviceId/rawconfig.
 // Relays to the device's rawconfig.* actions (see the Go app's
@@ -17,26 +17,26 @@ type Params = Request<{ deviceId: string }>;
 type FileParams = Request<{ deviceId: string; file: string }>;
 
 rawconfigRouter.get("/files", async (req: Params, res) => {
-  const files = await sendAction(req.params.deviceId, "rawconfig.listFiles");
+  const files = await auditedSendAction(req, "rawconfig.listFiles");
   res.json(files);
 });
 
 rawconfigRouter.get("/:file", async (req: FileParams, res) => {
-  const result = await sendAction(req.params.deviceId, "rawconfig.getFile", { file: req.params.file });
+  const result = await auditedSendAction(req, "rawconfig.getFile", { file: req.params.file });
   res.json(result);
 });
 
 rawconfigRouter.post("/:file/key", async (req: FileParams, res) => {
-  const result = await sendAction(req.params.deviceId, "rawconfig.setKey", { file: req.params.file, ...req.body });
+  const result = await auditedSendAction(req, "rawconfig.setKey", { file: req.params.file, ...req.body });
   res.json(result);
 });
 
 rawconfigRouter.post("/:file/add-key", async (req: FileParams, res) => {
-  const result = await sendAction(req.params.deviceId, "rawconfig.addKey", { file: req.params.file, ...req.body });
+  const result = await auditedSendAction(req, "rawconfig.addKey", { file: req.params.file, ...req.body });
   res.json(result);
 });
 
 rawconfigRouter.post("/:file/add-section", async (req: FileParams, res) => {
-  const result = await sendAction(req.params.deviceId, "rawconfig.addSection", { file: req.params.file, ...req.body });
+  const result = await auditedSendAction(req, "rawconfig.addSection", { file: req.params.file, ...req.body });
   res.json(result);
 });

@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 
 import { requireAuth } from "../auth/middleware.js";
 import { authorizeDevice } from "../middleware/authorizeDevice.js";
-import { sendAction } from "../services/relay.js";
+import { auditedSendAction } from "../middleware/auditLogger.js";
 
 // skywarnplusRouter is mounted at /api/devices/:deviceId/skywarn.
 // Relays to the device's skywarn.* actions (see the Go app's
@@ -18,36 +18,36 @@ type Params = Request<{ deviceId: string }>;
 // actionSkywarnListCounties's own doc comment for why it works even
 // when SkywarnPlus itself isn't installed.
 skywarnplusRouter.get("/counties", async (req: Params, res) => {
-  const counties = await sendAction(req.params.deviceId, "skywarn.listCounties");
+  const counties = await auditedSendAction(req, "skywarn.listCounties");
   res.json(counties);
 });
 
 skywarnplusRouter.get("/status", async (req: Params, res) => {
-  const status = await sendAction(req.params.deviceId, "skywarn.getStatus");
+  const status = await auditedSendAction(req, "skywarn.getStatus");
   res.json(status);
 });
 
 skywarnplusRouter.post("/toggle", async (req: Params, res) => {
-  const result = await sendAction(req.params.deviceId, "skywarn.setToggle", req.body);
+  const result = await auditedSendAction(req, "skywarn.setToggle", req.body);
   res.json(result);
 });
 
 skywarnplusRouter.post("/county-codes", async (req: Params, res) => {
-  const result = await sendAction(req.params.deviceId, "skywarn.setCounties", req.body);
+  const result = await auditedSendAction(req, "skywarn.setCounties", req.body);
   res.json(result);
 });
 
 skywarnplusRouter.post("/nodes", async (req: Params, res) => {
-  const result = await sendAction(req.params.deviceId, "skywarn.addNode", req.body);
+  const result = await auditedSendAction(req, "skywarn.addNode", req.body);
   res.json(result);
 });
 
 skywarnplusRouter.post("/pushover", async (req: Params, res) => {
-  const result = await sendAction(req.params.deviceId, "skywarn.setPushover", req.body);
+  const result = await auditedSendAction(req, "skywarn.setPushover", req.body);
   res.json(result);
 });
 
 skywarnplusRouter.post("/skydescribe", async (req: Params, res) => {
-  const result = await sendAction(req.params.deviceId, "skywarn.setSkyDescribe", req.body);
+  const result = await auditedSendAction(req, "skywarn.setSkyDescribe", req.body);
   res.json(result);
 });

@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 
 import { requireAuth } from "../auth/middleware.js";
 import { authorizeDevice } from "../middleware/authorizeDevice.js";
-import { sendAction } from "../services/relay.js";
+import { auditedSendAction } from "../middleware/auditLogger.js";
 
 // wxtoneRouter is mounted at /api/devices/:deviceId/wxtone. Relays to
 // the device's wxTone.* actions (see the Go app's
@@ -17,16 +17,16 @@ type DeleteParams = Request<{ deviceId: string; id: string }>;
 
 wxtoneRouter.get("/", async (req: ListParams, res) => {
   const node = String(req.query.node ?? "");
-  const entries = await sendAction(req.params.deviceId, "wxTone.list", { node });
+  const entries = await auditedSendAction(req, "wxTone.list", { node });
   res.json(entries);
 });
 
 wxtoneRouter.post("/", async (req: ListParams, res) => {
-  const saved = await sendAction(req.params.deviceId, "wxTone.save", req.body);
+  const saved = await auditedSendAction(req, "wxTone.save", req.body);
   res.json(saved);
 });
 
 wxtoneRouter.delete("/:id", async (req: DeleteParams, res) => {
-  await sendAction(req.params.deviceId, "wxTone.delete", { id: req.params.id });
+  await auditedSendAction(req, "wxTone.delete", { id: req.params.id });
   res.status(204).end();
 });

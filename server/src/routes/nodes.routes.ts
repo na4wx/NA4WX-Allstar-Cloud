@@ -2,7 +2,7 @@ import { Router, type Request } from "express";
 
 import { requireAuth } from "../auth/middleware.js";
 import { authorizeDevice } from "../middleware/authorizeDevice.js";
-import { sendAction } from "../services/relay.js";
+import { auditedSendAction } from "../middleware/auditLogger.js";
 import { subscribeNode } from "../ws/nodeLiveHub.js";
 
 // nodesRouter is mounted at /api/devices/:deviceId/nodes (mergeParams:
@@ -22,12 +22,12 @@ nodesRouter.use(requireAuth, authorizeDevice);
 type NodeParams = Request<{ deviceId: string; number?: string }>;
 
 nodesRouter.get("/", async (req: NodeParams, res) => {
-  const numbers = await sendAction<string[]>(req.params.deviceId, "config.listNodes");
+  const numbers = await auditedSendAction<string[]>(req, "config.listNodes");
   res.json(numbers);
 });
 
 nodesRouter.get("/:number", async (req: NodeParams, res) => {
-  const node = await sendAction(req.params.deviceId, "config.loadNode", { number: req.params.number });
+  const node = await auditedSendAction(req, "config.loadNode", { number: req.params.number });
   res.json(node);
 });
 
@@ -38,12 +38,12 @@ nodesRouter.get("/:number", async (req: NodeParams, res) => {
 // knowing the id yet" case the way there is for devices themselves.
 nodesRouter.put("/:number", async (req: NodeParams, res) => {
   const node = { ...req.body, number: req.params.number };
-  const saved = await sendAction(req.params.deviceId, "config.saveNode", node);
+  const saved = await auditedSendAction(req, "config.saveNode", node);
   res.json(saved);
 });
 
 nodesRouter.delete("/:number", async (req: NodeParams, res) => {
-  await sendAction(req.params.deviceId, "config.deleteNode", { number: req.params.number });
+  await auditedSendAction(req, "config.deleteNode", { number: req.params.number });
   res.status(204).end();
 });
 
