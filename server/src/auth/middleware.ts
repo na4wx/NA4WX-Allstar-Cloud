@@ -17,13 +17,14 @@ declare global {
 // httpOnly refresh cookie) when a request comes back 401.
 //
 // Falls back to a ?token= query parameter when no header is present --
-// needed only because the browser's EventSource API (used for the
-// device live-status SSE stream) cannot set custom headers at all.
+// needed for the handful of GET routes the browser can't attach a
+// custom header to at all: the EventSource-based live-status SSE
+// streams, and an <audio src> pointed straight at a sound-preview URL.
 // This is a deliberate, narrow concession: a token in a URL can end up
 // in server access logs or a Referer header, but the access token is
-// short-lived (15 min) and this fallback only ever matters for the one
-// GET route that can't use a header. Every state-changing route is
-// still only ever called with a proper header by this app's own
+// short-lived (15 min) and this fallback only ever matters for read-only
+// GETs a browser element fetches on its own. Every state-changing route
+// is still only ever called with a proper header by this app's own
 // fetch-based client.
 export function requireAuth(req: Request, res: Response, next: NextFunction): void {
   const header = req.header("authorization") ?? "";

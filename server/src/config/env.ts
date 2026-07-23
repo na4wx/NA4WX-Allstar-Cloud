@@ -28,4 +28,15 @@ export const env = {
   // this repo's own local dev setup via client/vite.config.ts's dev
   // proxy) need no CORS configuration at all.
   clientOrigin: process.env.CLIENT_ORIGIN,
+
+  // piperBin/piperVoicesDir configure server-side text-to-speech (see
+  // services/piperTts.ts) -- Piper run on this process instead of the
+  // node, for the same reason the node's own internal/tts package runs
+  // it locally: free, fully offline neural TTS, just with real CPU/RAM
+  // behind it instead of a Pi's. No required() check: a missing/empty
+  // voices dir just means listVoices() returns [] (matches the Go
+  // side's own ListVoices treating a missing directory as "no voices,"
+  // not an error) -- TTS generation is optional, not load-bearing.
+  piperBin: process.env.PIPER_BIN ?? "piper",
+  piperVoicesDir: process.env.PIPER_VOICES_DIR ?? "",
 };

@@ -45,6 +45,16 @@ specific, hardcoded internal call. `TestActionsRegistryIsFixedAllowlist`
 accidental switch to a dynamic dispatcher would have to change that
 test too, not slip in silently.
 
+The same discipline applies to the one place this service itself runs
+an external tool: `services/piperTts.ts`'s `synthesize` spawns Piper via
+array-form `child_process.spawn` (never a shell, so shell metacharacters
+in the submitted text are inert), with the text piped only via stdin
+(never appended to `args`) and the voice's model path only ever resolved
+through `findVoice`'s own directory scan — never built by concatenating
+a client-supplied voice name into a path. Mirrors
+`internal/tts/tts.go`'s `FindVoice`'s identical discipline on the node
+side.
+
 ## 4. Capability gates beyond Cloud Sync itself
 
 Two extra, off-by-default flags live in the node's own local settings
@@ -100,6 +110,11 @@ at all does not, by itself, expose either of these.
   attempts / minute per IP, generous relative to a device's own
   exponential-backoff reconnect cadence (1s → 60s cap, full jitter —
   see `internal/cloudagent/run.go`).
+- `ttsRateLimiter`: 10 requests / minute per IP on
+  `POST /tts/generate` specifically — stricter than `actionRateLimiter`
+  on purpose, since unlike every other action route this one does real
+  CPU-bound work on this process itself (spawns Piper) rather than just
+  relaying to the device and waiting.
 
 ## 7. TLS
 
@@ -252,3 +267,11 @@ a one-time checkbox.
   (see #7) — a misconfigured deployment could still run either side
   over plaintext. No automated test currently proves a `ws://` URL is
   refused, because nothing in the code refuses one.
+- **WS relay message size is explicitly capped, not unbounded**:
+  `internal/cloudagent/client.go`'s `runOnce` sets an explicit 16MiB
+  `SetReadLimit` on the device's WS connection (coder/websocket
+  otherwise defaults to 32KiB, which a real relayed audio file blows
+  past easily). Any single relayed message — a `sounds.upload` payload
+  in particular — larger than that is rejected and the connection is
+  torn down rather than silently accepted; worth remembering if a
+  future feature ever needs to relay something larger.

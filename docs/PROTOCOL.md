@@ -209,6 +209,7 @@ all.
 | `sounds.listAll` | — | `sounds.File[]` | none |
 | `sounds.upload` | `{name, dataBase64}` | `{ok:true}` | none |
 | `sounds.delete` | `{name}` | `{ok:true}` | none |
+| `sounds.preview` | `{name}` | `{dataBase64}` (WAV, custom sounds only) | none |
 | `rawconfig.listFiles` | — | `string[]` (file names only, not sensitive) | none |
 | `rawconfig.getFile` | `{file}` | `{sections: [{name, keys: [{key, value}]}]}` | `AllowRawConfigEdit` |
 | `rawconfig.setKey` | `{file, section, index, value}` | `{ok:true}` | `AllowRawConfigEdit` + step-up |
@@ -245,3 +246,13 @@ Routes that also need an audit trail (see SECURITY.md) call
 `auditedSendAction(req, action, params, timeoutMs?)`
 (`middleware/auditLogger.ts`) instead of `sendAction` directly — same
 behavior, plus one `AuditLog` document per attempt.
+
+**One deliberate exception**: `POST /api/devices/:deviceId/tts/generate`
+(`routes/tts.routes.ts`) never calls `sendAction` at all — it's answered
+entirely by this process, which synthesizes speech itself (see
+`services/piperTts.ts`) and hands the result straight back to the
+browser. No `call`/`result` envelope is ever exchanged with the device
+for this request; the device is only ever involved in a later, separate
+`sounds.upload` call if the operator chooses to send what was
+generated. `tts.generate` isn't in the action table above for exactly
+this reason — it isn't a relayed action at all.

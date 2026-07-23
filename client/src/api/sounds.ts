@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
-import { apiFetch } from "./client";
+import { apiFetch, apiUrl, getAccessToken } from "./client";
 
 export interface SoundFile {
   name: string;
@@ -47,4 +47,30 @@ export function useDeleteSound(deviceId: string) {
     mutationFn: (name: string) => apiFetch(`/api/devices/${deviceId}/sounds/${encodeURIComponent(name)}`, { method: "DELETE" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "sounds"] }),
   });
+}
+
+// useSaveGeneratedSound is useUploadSound's counterpart for audio that
+// was generated server-side (see api/tts.ts's useGenerateSpeech) rather
+// than picked from disk -- it already has base64 bytes with no File
+// object to read, so it posts directly instead of going through
+// fileToBase64.
+export function useSaveGeneratedSound(deviceId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ name, dataBase64 }: { name: string; dataBase64: string }) =>
+      apiFetch(`/api/devices/${deviceId}/sounds`, { method: "POST", body: JSON.stringify({ name, dataBase64 }) }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["devices", deviceId, "sounds"] }),
+  });
+}
+
+// soundPreviewUrl builds the URL an <audio src> can point at directly to
+// play one of the operator's own custom sounds already on the device.
+// Carries the access token as a query param, same as useNodeLive's own
+// EventSource URL -- neither <audio src> nor EventSource can set a
+// custom Authorization header.
+export function soundPreviewUrl(deviceId: string, name: string): string {
+  const token = getAccessToken();
+  return apiUrl(
+    `/api/devices/${deviceId}/sounds/${encodeURIComponent(name)}/preview${token ? `?token=${encodeURIComponent(token)}` : ""}`,
+  );
 }

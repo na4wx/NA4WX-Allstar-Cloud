@@ -20,6 +20,7 @@ import { skywarnplusRouter } from "./routes/skywarnplus.routes.js";
 import { soundScheduleRouter } from "./routes/soundSchedule.routes.js";
 import { soundsRouter } from "./routes/sounds.routes.js";
 import { systemRouter } from "./routes/system.routes.js";
+import { ttsRouter } from "./routes/tts.routes.js";
 import { wxtoneRouter } from "./routes/wxtone.routes.js";
 
 export function buildApp(): Express {
@@ -66,6 +67,7 @@ export function buildApp(): Express {
   app.use("/api/devices/:deviceId/skywarn", skywarnplusRouter);
   app.use("/api/devices/:deviceId/sounds", soundsRouter);
   app.use("/api/devices/:deviceId/rawconfig", rawconfigRouter);
+  app.use("/api/devices/:deviceId/tts", ttsRouter);
   app.use("/api/devices", devicesRouter);
 
   app.get("/api/health", (_req, res) => res.json({ ok: true }));

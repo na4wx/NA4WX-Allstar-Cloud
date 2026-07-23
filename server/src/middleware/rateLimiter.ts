@@ -25,3 +25,16 @@ export const actionRateLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: "too many requests, slow down" },
 });
+
+// ttsRateLimiter bounds POST /tts/generate specifically -- unlike every
+// other /api/devices/* route, this one does real CPU-bound work on this
+// process itself (spawns Piper, see services/piperTts.ts) rather than
+// just relaying to the device and waiting, so it needs a stricter,
+// dedicated limit on top of the blanket actionRateLimiter above.
+export const ttsRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "too many speech-generation requests, slow down" },
+});
