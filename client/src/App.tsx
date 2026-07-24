@@ -5,11 +5,14 @@ import { StepUpPrompt } from "./components/StepUpPrompt";
 import { TopNav } from "./components/TopNav";
 import { DeviceDetail } from "./routes/DeviceDetail";
 import { DevicesList } from "./routes/DevicesList";
+import { ForgotPassword } from "./routes/ForgotPassword";
+import { Home } from "./routes/Home";
 import { Login } from "./routes/Login";
 import { NodeEditor } from "./routes/NodeEditor";
 import { NodesList } from "./routes/NodesList";
 import { RawConfigEditor } from "./routes/RawConfigEditor";
 import { Register } from "./routes/Register";
+import { ResetPassword } from "./routes/ResetPassword";
 import { SoundsManager } from "./routes/SoundsManager";
 import { useAuth } from "./state/auth";
 
@@ -31,10 +34,13 @@ export function App() {
       <StepUpPrompt />
       <main>
         <Routes>
+          <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route
-            path="/"
+            path="/dashboard"
             element={
               <RequireAuth>
                 <DevicesList />

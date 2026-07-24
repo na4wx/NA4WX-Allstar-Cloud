@@ -9,6 +9,8 @@ interface AuthState {
   login(email: string, password: string): Promise<void>;
   register(email: string, password: string): Promise<void>;
   logout(): Promise<void>;
+  forgotPassword(email: string): Promise<string>;
+  resetPassword(token: string, password: string): Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -68,7 +70,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearStepUpCache();
   };
 
-  return <AuthContext.Provider value={{ email, loading, login, register, logout }}>{children}</AuthContext.Provider>;
+  // No session is created by either of these -- unlike login/register,
+  // they don't touch accessToken/email.
+  const forgotPassword = async (forgotEmail: string) => {
+    const data = await apiFetch<{ ok: boolean; message: string }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email: forgotEmail }),
+    });
+    return data.message;
+  };
+
+  const resetPassword = async (token: string, password: string) => {
+    await apiFetch("/api/auth/reset-password", { method: "POST", body: JSON.stringify({ token, password }) });
+  };
+
+  return (
+    <AuthContext.Provider value={{ email, loading, login, register, logout, forgotPassword, resetPassword }}>{children}</AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthState {

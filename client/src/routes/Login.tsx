@@ -17,7 +17,7 @@ export function Login() {
     setSubmitting(true);
     try {
       await login(email, password);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "login failed");
     } finally {
@@ -47,6 +47,9 @@ export function Login() {
         </form>
         <p className="hint">
           No account yet? <Link to="/register">Create one</Link>
+        </p>
+        <p className="hint">
+          <Link to="/forgot-password">Forgot password?</Link>
         </p>
       </div>
     </div>

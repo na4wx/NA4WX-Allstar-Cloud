@@ -22,7 +22,7 @@ export function Register() {
     setSubmitting(true);
     try {
       await register(email, password);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(err instanceof Error ? err.message : "registration failed");
     } finally {

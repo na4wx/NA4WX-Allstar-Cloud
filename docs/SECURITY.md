@@ -237,6 +237,32 @@ cross-subdomain fetch same-site, not cross-site, so the existing
 - Step-up tokens (see #5) are a separate, much shorter-lived (5 min)
   credential on top of this, not a substitute for it.
 
+## 11. Password reset
+
+- `POST /api/auth/forgot-password` always returns the same generic
+  response (`"If an account exists for that email, a reset link has
+  been sent."`) whether or not the email matches a real account, and
+  never awaits the email send before responding — both narrow the
+  timing/content signal an attacker could use to enumerate registered
+  emails. Rate-limited to 5/hour/IP (`passwordResetRateLimiter`,
+  `middleware/rateLimiter.ts`), the dominant real defense against
+  enumeration-by-volume.
+- Reset tokens follow the exact same shape as refresh tokens (#10): a
+  high-entropy random value, only its SHA-256 hash ever persisted
+  (`PasswordReset` model, `auth/passwordReset.ts`), single-use
+  (`usedAt`), and time-bounded (1 hour, enforced both in the route and
+  via a MongoDB TTL index that auto-deletes the document — no manual
+  cleanup job needed).
+- `POST /api/auth/reset-password` revokes every existing session for
+  that account the moment the password changes (`SessionModel.updateMany`)
+  — the same reasoning as #9's key-rotation story: a credential change
+  should invalidate everything the old credential could do, not just
+  future logins.
+- Emailing is optional infrastructure, not a hard dependency of the
+  auth router: if SMTP isn't configured (`services/mailer.ts`), a
+  reset request is logged instead of sent rather than the route
+  erroring — see that file's own doc comment.
+
 ## Dependency audit
 
 Run as part of Phase 4 hardening; re-run periodically, not treated as

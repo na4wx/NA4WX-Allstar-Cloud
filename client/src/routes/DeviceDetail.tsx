@@ -159,7 +159,7 @@ export function DeviceDetail() {
     try {
       const stepUpToken = await ensureStepUp();
       await deleteDevice.mutateAsync({ id: id!, stepUpToken });
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       if (err instanceof StepUpCancelledError) {
         return;
@@ -192,7 +192,7 @@ export function DeviceDetail() {
   return (
     <div>
       <p>
-        <Link to="/">&larr; All devices</Link>
+        <Link to="/dashboard">&larr; All devices</Link>
       </p>
       <div className="label-row">
         <h1 style={{ marginBottom: 0 }}>{device.name}</h1>

@@ -26,6 +26,20 @@ export const actionRateLimiter = rateLimit({
   message: { error: "too many requests, slow down" },
 });
 
+// passwordResetRateLimiter bounds POST /forgot-password specifically --
+// stricter than the router-level authRateLimiter it stacks on top of
+// (same pattern as ttsRateLimiter on top of actionRateLimiter below):
+// this endpoint triggers a real outbound email send, and is the one
+// auth route where a flood is otherwise indistinguishable from a
+// legitimate but forgetful user without a tighter, dedicated bound.
+export const passwordResetRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "too many password reset requests, try again later" },
+});
+
 // ttsRateLimiter bounds POST /tts/generate specifically -- unlike every
 // other /api/devices/* route, this one does real CPU-bound work on this
 // process itself (spawns Piper, see services/piperTts.ts) rather than

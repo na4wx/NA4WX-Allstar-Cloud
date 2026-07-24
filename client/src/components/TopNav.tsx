@@ -16,7 +16,7 @@ export function TopNav() {
 
   return (
     <header className="topbar">
-      <Link to="/" className="brand">
+      <Link to={email ? "/dashboard" : "/"} className="brand">
         NA4WX Allstar Cloud
       </Link>
       {email && (

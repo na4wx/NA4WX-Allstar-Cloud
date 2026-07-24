@@ -4,8 +4,12 @@ import { env } from "../config/env.js";
 import { hashPassword, verifyPassword } from "../auth/password.js";
 import { generateRefreshToken, hashRefreshToken, refreshTokenTTLMs, signAccessToken, signStepUpToken } from "../auth/jwt.js";
 import { requireAuth } from "../auth/middleware.js";
+import { generatePasswordResetToken, hashPasswordResetToken, passwordResetTokenTTLMs } from "../auth/passwordReset.js";
+import { passwordResetRateLimiter } from "../middleware/rateLimiter.js";
+import { PasswordResetModel } from "../models/PasswordReset.js";
 import { SessionModel } from "../models/Session.js";
 import { UserModel } from "../models/User.js";
+import { sendPasswordResetEmail } from "../services/mailer.js";
 
 export const authRouter = Router();
 
@@ -101,6 +105,62 @@ authRouter.post("/logout", async (req, res) => {
   }
   res.clearCookie(refreshCookieName, { path: refreshCookiePath });
   res.status(204).end();
+});
+
+const forgotPasswordGenericResponse = { ok: true, message: "If an account exists for that email, a reset link has been sent." };
+
+// POST /api/auth/forgot-password always returns the identical response
+// whether or not the email matches a real account, and never reveals
+// which happened -- the same enumeration-resistance goal as login's own
+// fixed-dummy-hash timing-safe compare, just applied to response
+// content rather than timing (a full timing-safe version would also
+// need a dummy delay on the no-user path; skipped here since this route
+// is already rate-limited to 5/hour/IP, which is the dominant real
+// defense against enumeration by request volume).
+authRouter.post("/forgot-password", passwordResetRateLimiter, async (req, res) => {
+  const email = String(req.body?.email ?? "").trim().toLowerCase();
+  if (email) {
+    const user = await UserModel.findOne({ email });
+    if (user) {
+      const token = generatePasswordResetToken();
+      await PasswordResetModel.create({
+        userId: user._id,
+        tokenHash: hashPasswordResetToken(token),
+        expiresAt: new Date(Date.now() + passwordResetTokenTTLMs),
+      });
+      const resetUrl = `${env.appUrl}/reset-password?token=${token}`;
+      sendPasswordResetEmail(user.email, resetUrl).catch((err) => {
+        console.error("failed to send password reset email:", err);
+      });
+    }
+  }
+  res.json(forgotPasswordGenericResponse);
+});
+
+authRouter.post("/reset-password", async (req, res) => {
+  const token = String(req.body?.token ?? "");
+  const password = String(req.body?.password ?? "");
+  if (!token) {
+    res.status(400).json({ error: "missing reset token" });
+    return;
+  }
+  if (password.length < 8) {
+    res.status(400).json({ error: "password must be at least 8 characters" });
+    return;
+  }
+  const record = await PasswordResetModel.findOne({ tokenHash: hashPasswordResetToken(token) });
+  if (!record || record.usedAt || record.expiresAt.getTime() < Date.now()) {
+    res.status(400).json({ error: "this reset link is invalid or has expired" });
+    return;
+  }
+  record.usedAt = new Date();
+  await record.save();
+  await UserModel.updateOne({ _id: record.userId }, { passwordHash: await hashPassword(password) });
+  // A password reset logs out every session holding the old password --
+  // the same reasoning as rotating a device API key invalidating that
+  // credential everywhere it was in use.
+  await SessionModel.updateMany({ userId: record.userId, revokedAt: null }, { revokedAt: new Date() });
+  res.json({ ok: true });
 });
 
 // POST /api/auth/step-up re-checks the account password and, if it

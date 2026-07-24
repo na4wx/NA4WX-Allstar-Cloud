@@ -20,6 +20,14 @@ without needing physical/SSH access to it. See `docs/PROTOCOL.md` for
 exactly how (`POST /tts/generate` never touches the device at all;
 `sounds.preview` does).
 
+`/` is a public page for anyone, logged in or not — a pitch for the
+service plus the `install.sh` command for getting a node talking to
+it; the authenticated device list lives at `/dashboard`. Forgotten a
+password? `/forgot-password` emails a reset link via SMTP (optional —
+see `server/.env.example`'s `SMTP_*`/`APP_URL` vars; without SMTP
+configured, a reset request is logged instead of emailed, which is
+fine for local development).
+
 See [`docs/PROTOCOL.md`](docs/PROTOCOL.md) for the exact node↔cloud
 wire protocol and action catalog, and [`docs/SECURITY.md`](docs/SECURITY.md)
 for the full security model and current dependency audit status.
