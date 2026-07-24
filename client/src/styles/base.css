@@ -246,9 +246,18 @@ table th { color: var(--text-dim); font-weight: 550; font-size: 0.86rem; }
   border-radius: var(--radius-sm);
   padding: 0.65rem 0.9rem;
   margin: 0.5rem 0;
-  overflow-x: auto;
 }
-.code-block code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 0.85rem; white-space: nowrap; }
+/* The code scrolls inside its own flex slot; the copy button never
+   scrolls out of view with it. */
+.code-block code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow-x: auto;
+  flex: 1;
+  min-width: 0;
+}
+.code-block button { flex: none; }
 
 .live-head {
   display: flex;
@@ -303,3 +312,129 @@ table th { color: var(--text-dim); font-weight: 550; font-size: 0.86rem; }
   box-shadow: var(--shadow-lg);
 }
 .modal .field:last-of-type { margin-bottom: 0; }
+
+/* Landing page (routes/Home.tsx) -- this app's one marketing-shaped
+   page, so it gets its own layout language: an open hero on the bare
+   background instead of a stack of cards, then a feature grid and a
+   numbered how-it-works row. Everything uses the shared tokens, so
+   light/dark both work without page-specific colors. */
+.hero {
+  text-align: center;
+  padding: 3.5rem 1rem 3rem;
+}
+.hero-eyebrow {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  margin-bottom: 1.4rem;
+}
+.hero h1 {
+  font-size: clamp(2rem, 5vw, 2.9rem);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+  margin: 0 0 1.1rem;
+}
+.hero h1 .accent {
+  background: linear-gradient(120deg, var(--accent), color-mix(in srgb, var(--accent) 55%, var(--ok)));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.hero-tagline {
+  max-width: 620px;
+  margin: 0 auto 2rem;
+  font-size: 1.08rem;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+.hero-actions {
+  display: flex;
+  justify-content: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.hero-actions .btn { padding: 0.7rem 1.5rem; font-size: 1rem; }
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+.feature-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.4rem;
+  box-shadow: var(--shadow-sm);
+}
+.feature-card .feature-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  font-size: 1.25rem;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  margin-bottom: 0.85rem;
+}
+.feature-card h3 {
+  font-size: 1rem;
+  font-weight: 640;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.4rem;
+}
+.feature-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0 0.5rem;
+}
+.step { text-align: center; }
+.step-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.1rem;
+  height: 2.1rem;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--accent-text);
+  background: var(--accent);
+  border-radius: 50%;
+  margin-bottom: 0.7rem;
+}
+.step h3 {
+  font-size: 0.98rem;
+  font-weight: 640;
+  margin: 0 0 0.35rem;
+}
+.step p {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+
+.landing-section-title {
+  text-align: center;
+  font-size: 1.35rem;
+  font-weight: 660;
+  letter-spacing: -0.02em;
+  margin: 0 0 1.4rem;
+}
