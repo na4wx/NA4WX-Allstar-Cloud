@@ -7,6 +7,7 @@ import {
   type AutomationActionKey,
   type SaveAutomationConnection,
 } from "../api/nodes";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 
 const actionOptions: { key: AutomationActionKey; label: string; needsTarget: boolean }[] = [
@@ -36,6 +37,7 @@ export function AutomationScheduleSection({ deviceId, node }: { deviceId: string
   const { data: rows, isLoading, error } = useAutomationSchedule(deviceId, node);
   const save = useSaveAutomationConnection(deviceId, node);
   const del = useDeleteAutomationConnection(deviceId, node);
+  const { canEdit } = useDeviceRole();
 
   const [form, setForm] = useState<SaveAutomationConnection>(blank);
   const [flash, setFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
@@ -96,7 +98,7 @@ export function AutomationScheduleSection({ deviceId, node }: { deviceId: string
                   <td>{r.recognized ? r.label : <span className="hint">{r.label}</span>}</td>
                   <td>{r.timeSpec}</td>
                   <td>
-                    <button className="danger" onClick={() => handleDelete(r.macroNum)}>
+                    <button className="danger" onClick={() => handleDelete(r.macroNum)} disabled={!canEdit}>
                       Delete
                     </button>
                   </td>
@@ -156,7 +158,7 @@ export function AutomationScheduleSection({ deviceId, node }: { deviceId: string
           </div>
         </div>
         <div className="actions">
-          <button type="submit" className="primary" disabled={save.isPending}>
+          <button type="submit" className="primary" disabled={save.isPending || !canEdit}>
             Add schedule entry
           </button>
         </div>

@@ -1,5 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { Link, NavLink, useMatch, useNavigate } from "react-router-dom";
 
+import { apiFetch } from "../api/client";
+import type { Device } from "../api/devices";
 import { useAuth } from "../state/auth";
 
 // Port of the local Go app's header.topbar -- a flat brand + nav row,
@@ -16,6 +19,16 @@ export function TopNav() {
   const navigate = useNavigate();
   const deviceMatch = useMatch("/devices/:deviceId/*");
   const deviceId = deviceMatch?.params.deviceId;
+  // Raw config is admin-tier-gated server-side (see rawconfig.routes.ts);
+  // hiding the link for lower tiers here avoids sending a viewer/editor
+  // to a page that can only ever 403 for them. Shares devices.ts's own
+  // useDevice query key/cache, so this doesn't add an extra fetch.
+  const { data: device } = useQuery({
+    queryKey: ["devices", deviceId],
+    queryFn: () => apiFetch<Device>(`/api/devices/${deviceId}`),
+    enabled: !!deviceId,
+  });
+  const canSeeRawConfig = device?.role === "owner" || device?.role === "admin";
 
   const handleLogout = async () => {
     await logout();
@@ -45,9 +58,11 @@ export function TopNav() {
               <NavLink to={`/devices/${deviceId}/sounds`} className={navLinkClass}>
                 Sounds
               </NavLink>
-              <NavLink to={`/devices/${deviceId}/rawconfig`} className={navLinkClass}>
-                Raw config
-              </NavLink>
+              {canSeeRawConfig && (
+                <NavLink to={`/devices/${deviceId}/rawconfig`} className={navLinkClass}>
+                  Raw config
+                </NavLink>
+              )}
             </>
           )}
           <span className="muted" style={{ margin: "0 0.75rem" }}>

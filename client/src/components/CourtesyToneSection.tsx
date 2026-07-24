@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { useNode, useSaveCourtesyTones, type CourtesyTones } from "../api/nodes";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 
 const blank: CourtesyTones = { unlinkedCT: "", remoteCT: "", linkUnkeyCT: "" };
@@ -12,6 +13,7 @@ const blank: CourtesyTones = { unlinkedCT: "", remoteCT: "", linkUnkeyCT: "" };
 export function CourtesyToneSection({ deviceId, node }: { deviceId: string; node: string }) {
   const { data: existing, isLoading } = useNode(deviceId, node);
   const save = useSaveCourtesyTones(deviceId, node);
+  const { canEdit } = useDeviceRole();
   const [form, setForm] = useState<CourtesyTones>(blank);
   const [flash, setFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
@@ -54,7 +56,7 @@ export function CourtesyToneSection({ deviceId, node }: { deviceId: string; node
           </div>
         </div>
         <div className="actions">
-          <button type="submit" className="primary" disabled={save.isPending}>
+          <button type="submit" className="primary" disabled={save.isPending || !canEdit}>
             Save
           </button>
         </div>

@@ -1,7 +1,7 @@
 import { Router, type Request } from "express";
 
 import { requireAuth } from "../auth/middleware.js";
-import { authorizeDevice } from "../middleware/authorizeDevice.js";
+import { authorizeDevice, requireDeviceRole } from "../middleware/authorizeDevice.js";
 import { auditedSendAction } from "../middleware/auditLogger.js";
 import { requireStepUp } from "../middleware/stepUpAuth.js";
 
@@ -13,9 +13,14 @@ import { requireStepUp } from "../middleware/stepUpAuth.js";
 // allows. The three write routes also require step-up auth (see
 // middleware/stepUpAuth.ts) -- editing rpt.conf/iax.conf/etc. by hand
 // is exactly the kind of action the Go app's plan doc's Security
-// section (#5) calls out; the two read routes stay ungated.
+// section (#5) calls out.
+//
+// The entire router is admin-tier only, including the two read routes
+// -- unlike every other relay router, raw config can expose secrets
+// (an IAX2 registration password sits in plain text in iax.conf), so
+// even *reading* it is gated well above editor, not just writing it.
 export const rawconfigRouter = Router({ mergeParams: true });
-rawconfigRouter.use(requireAuth, authorizeDevice);
+rawconfigRouter.use(requireAuth, authorizeDevice, requireDeviceRole("admin"));
 
 type Params = Request<{ deviceId: string }>;
 type FileParams = Request<{ deviceId: string; file: string }>;

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 import { useDeleteFunctionMacro, useFunctionMacros, useSaveFunctionMacro, type FunctionMacroKind } from "../api/nodes";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 
 // FunctionMacroTable renders one of the local app's "Command list"
@@ -30,6 +31,7 @@ export function FunctionMacroTable({
   const { data: macros, isLoading, error } = useFunctionMacros(deviceId, node, kind);
   const save = useSaveFunctionMacro(deviceId, node, kind);
   const del = useDeleteFunctionMacro(deviceId, node, kind);
+  const { canEdit } = useDeviceRole();
 
   const [digits, setDigits] = useState("");
   const [command, setCommand] = useState("");
@@ -81,7 +83,7 @@ export function FunctionMacroTable({
                   <td>{m.digits}</td>
                   <td>{m.command}</td>
                   <td>
-                    <button className="danger" onClick={() => handleDelete(m.digits)}>
+                    <button className="danger" onClick={() => handleDelete(m.digits)} disabled={!canEdit}>
                       Delete
                     </button>
                   </td>
@@ -112,7 +114,7 @@ export function FunctionMacroTable({
           </div>
         </div>
         <div className="actions">
-          <button type="submit" className="primary" disabled={save.isPending}>
+          <button type="submit" className="primary" disabled={save.isPending || !canEdit}>
             Add / update
           </button>
         </div>

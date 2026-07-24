@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 import { useDeleteWXTone, useSaveWXTone, useWXTones } from "../api/wxtone";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 
 // WXToneSection lets an operator manage alert-driven courtesy-tone
@@ -14,6 +15,7 @@ export function WXToneSection({ deviceId, node }: { deviceId: string; node: stri
   const { data: entries, isLoading, error } = useWXTones(deviceId, node);
   const save = useSaveWXTone(deviceId, node);
   const del = useDeleteWXTone(deviceId, node);
+  const { canEdit } = useDeviceRole();
 
   const [ctKey, setCtKey] = useState("");
   const [normalSound, setNormalSound] = useState("");
@@ -70,7 +72,7 @@ export function WXToneSection({ deviceId, node }: { deviceId: string; node: stri
                 <td>{entry.wx_type === "tone" ? entry.wx_tone : entry.wx_sound}</td>
                 <td>{entry.mode === "wx" ? "WX" : "Normal"}</td>
                 <td>
-                  <button className="danger" onClick={() => del.mutate(entry.id)}>
+                  <button className="danger" onClick={() => del.mutate(entry.id)} disabled={!canEdit}>
                     Delete
                   </button>
                 </td>
@@ -96,7 +98,7 @@ export function WXToneSection({ deviceId, node }: { deviceId: string; node: stri
           </div>
         </div>
         <div className="actions">
-          <button type="submit" className="primary" disabled={save.isPending}>
+          <button type="submit" className="primary" disabled={save.isPending || !canEdit}>
             Add mapping
           </button>
         </div>

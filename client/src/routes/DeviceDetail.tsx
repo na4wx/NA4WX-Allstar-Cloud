@@ -1,9 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 
-import { useProgramSA818, type SA818Settings } from "../api/sa818";
+import { useLastSA818, useProgramSA818, type SA818Settings } from "../api/sa818";
 import { apiUrl, getAccessToken } from "../api/client";
+import { useAddCollaborator, useCollaborators, useRemoveCollaborator, useUpdateCollaboratorRole, type Collaborator } from "../api/collaborators";
 import {
   useDeleteDevice,
   useDevice,
@@ -11,6 +12,7 @@ import {
   useRevokeDevice,
   useRotateDeviceKey,
   type Device,
+  type DeviceRole,
   type DeviceWithKey,
 } from "../api/devices";
 import { useReboot, useRestartAsterisk } from "../api/system";
@@ -18,6 +20,9 @@ import { StepUpCancelledError, ensureStepUp } from "../api/stepUp";
 import { FlashBanner } from "../components/FlashBanner";
 import { LiveDot } from "../components/LiveDot";
 import { StatusPill } from "../components/StatusPill";
+
+const roleLabel: Record<DeviceRole, string> = { owner: "Owner", admin: "Admin", editor: "Editor", viewer: "Viewer" };
+const assignableRoles: Exclude<DeviceRole, "owner">[] = ["admin", "editor", "viewer"];
 
 const blankSA818: SA818Settings = {
   wide: true,
@@ -42,14 +47,37 @@ export function DeviceDetail() {
   const restartAsterisk = useRestartAsterisk(id!);
   const reboot = useReboot(id!);
   const programSA818 = useProgramSA818(id!);
+  // Only editor/admin/owner ever render the SA818 card (see
+  // canEditConfig below) -- skip the request entirely for a viewer.
+  const { data: lastSA818 } = useLastSA818(id!, device ? device.role !== "viewer" : false);
   const [sa818Form, setSA818Form] = useState<SA818Settings>(blankSA818);
   const [sa818Flash, setSA818Flash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
+
+  // Prefills the form with whatever this device last recorded sending,
+  // the same "last applied" record the local app's own System page
+  // reads back -- see api/sa818.ts's useLastSA818 doc comment. Only
+  // runs once real data arrives, so mid-edit changes are never
+  // clobbered by e.g. a slow response landing after the user's already
+  // started typing.
+  useEffect(() => {
+    if (lastSA818) {
+      setSA818Form(lastSA818);
+    }
+  }, [lastSA818]);
   const rotateKey = useRotateDeviceKey();
   const revokeDevice = useRevokeDevice();
   const reactivateDevice = useReactivateDevice();
   const deleteDevice = useDeleteDevice();
   const [securityFlash, setSecurityFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
   const [rotatedKey, setRotatedKey] = useState<DeviceWithKey | null>(null);
+
+  const { data: collaboratorsList } = useCollaborators(id!);
+  const addCollaborator = useAddCollaborator(id!);
+  const updateCollaboratorRole = useUpdateCollaboratorRole(id!);
+  const removeCollaborator = useRemoveCollaborator();
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<Exclude<DeviceRole, "owner">>("editor");
+  const [collaboratorsFlash, setCollaboratorsFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
   useEffect(() => {
     if (!id) {
@@ -66,8 +94,15 @@ export function DeviceDetail() {
     source.addEventListener("open", () => setLive(true));
     source.addEventListener("error", () => setLive(false));
     source.addEventListener("status", (event) => {
-      const data = JSON.parse((event as MessageEvent).data) as Device;
-      queryClient.setQueryData(["devices", id], data);
+      const data = JSON.parse((event as MessageEvent).data) as Omit<Device, "role">;
+      // Merge, don't replace -- the SSE payload is a shared broadcast
+      // fanned out to every subscriber of this device (owner and every
+      // collaborator alike, see server/src/models/Device.ts's
+      // toDeviceSummary doc comment), so it can't carry a per-viewer
+      // `role`. Replacing the whole cached object wholesale would wipe
+      // out `role` (only ever set from a REST response) on the very
+      // next ~20s heartbeat.
+      queryClient.setQueryData(["devices", id], (old: Device | undefined) => (old ? { ...old, ...data } : data));
     });
 
     return () => source.close();
@@ -182,12 +217,65 @@ export function DeviceDetail() {
     }
   };
 
+  const handleAddCollaborator = async (e: FormEvent) => {
+    e.preventDefault();
+    setCollaboratorsFlash(null);
+    try {
+      const stepUpToken = await ensureStepUp();
+      await addCollaborator.mutateAsync({ email: inviteEmail, role: inviteRole, stepUpToken });
+      setCollaboratorsFlash({ kind: "ok", message: `Granted ${roleLabel[inviteRole]} access to ${inviteEmail}.` });
+      setInviteEmail("");
+    } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
+      setCollaboratorsFlash({ kind: "error", message: err instanceof Error ? err.message : "failed to grant access" });
+    }
+  };
+
+  const handleChangeCollaboratorRole = async (userId: string, role: Exclude<DeviceRole, "owner">) => {
+    setCollaboratorsFlash(null);
+    try {
+      const stepUpToken = await ensureStepUp();
+      await updateCollaboratorRole.mutateAsync({ userId, role, stepUpToken });
+    } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
+      setCollaboratorsFlash({ kind: "error", message: err instanceof Error ? err.message : "failed to change role" });
+    }
+  };
+
+  const handleRemoveCollaborator = async (userId: string, email: string) => {
+    if (!confirm(`Remove ${email}'s access to "${device?.name}"?`)) {
+      return;
+    }
+    setCollaboratorsFlash(null);
+    try {
+      const stepUpToken = await ensureStepUp();
+      await removeCollaborator.mutateAsync({ deviceId: id!, userId, stepUpToken });
+    } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
+      setCollaboratorsFlash({ kind: "error", message: err instanceof Error ? err.message : "failed to remove" });
+    }
+  };
+
   if (isLoading) {
     return <p className="hint">Loading…</p>;
   }
   if (error || !device) {
     return <div className="flash error">{error instanceof Error ? error.message : "Device not found"}</div>;
   }
+
+  // Owner and admin-tier collaborators have full parity; editor can
+  // edit config (including SA818) but not the admin-only surface
+  // (Security/Restart options/Raw config); viewer sees neither the
+  // admin-only nor the SA818 card, since there's nothing for a
+  // read-only visitor to do there. See docs/SECURITY.md's role model.
+  const isAdminTier = device.role === "owner" || device.role === "admin";
+  const canEditConfig = isAdminTier || device.role === "editor";
 
   return (
     <div>
@@ -254,9 +342,11 @@ export function DeviceDetail() {
           <Link to={`/devices/${device.id}/sounds`} className="btn">
             Manage sounds
           </Link>
-          <Link to={`/devices/${device.id}/rawconfig`} className="btn danger">
-            Raw config
-          </Link>
+          {isAdminTier && (
+            <Link to={`/devices/${device.id}/rawconfig`} className="btn danger">
+              Raw config
+            </Link>
+          )}
         </div>
         <p className="hint" style={{ marginTop: "1rem" }}>
           Each node's edit page is tabbed, matching the local app's own Setup / Tones &amp; Audio / Allstar Network / Live
@@ -264,6 +354,96 @@ export function DeviceDetail() {
         </p>
       </div>
 
+      <div className="card">
+        <h2>Collaborators</h2>
+        <p className="hint">
+          Grant other accounts access to this device. Administrator has full parity with the owner; Editor can view and edit
+          config but not restart/reboot or raw config; Viewer is read-only.
+        </p>
+        {collaboratorsFlash && <FlashBanner kind={collaboratorsFlash.kind} message={collaboratorsFlash.message} />}
+        <div className="table-scroll">
+          <table className="data-table" style={{ marginBottom: isAdminTier ? "1.25rem" : 0 }}>
+            <thead>
+              <tr>
+                <th>Email</th>
+                <th>Access</th>
+                {isAdminTier && <th></th>}
+              </tr>
+            </thead>
+            <tbody>
+              {collaboratorsList?.owner && (
+                <tr>
+                  <td>{collaboratorsList.owner.email}</td>
+                  <td>
+                    <span className="tag">Owner</span>
+                  </td>
+                  {isAdminTier && <td></td>}
+                </tr>
+              )}
+              {collaboratorsList?.collaborators.map((c: Collaborator) => (
+                <tr key={c.userId}>
+                  <td>{c.email}</td>
+                  <td>
+                    {isAdminTier ? (
+                      <select value={c.role} onChange={(e) => handleChangeCollaboratorRole(c.userId, e.target.value as Exclude<DeviceRole, "owner">)}>
+                        {assignableRoles.map((r) => (
+                          <option key={r} value={r}>
+                            {roleLabel[r]}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="tag">{roleLabel[c.role]}</span>
+                    )}
+                  </td>
+                  {isAdminTier && (
+                    <td>
+                      <button className="danger" onClick={() => handleRemoveCollaborator(c.userId, c.email)}>
+                        Remove
+                      </button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {isAdminTier && (
+          <form onSubmit={handleAddCollaborator}>
+            <div className="row">
+              <div className="field">
+                <label htmlFor="collaborator_email">Email</label>
+                <input
+                  id="collaborator_email"
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  placeholder="them@example.com"
+                  required
+                />
+                <div className="hint">Must already have an account on this site.</div>
+              </div>
+              <div className="field" style={{ flex: "none" }}>
+                <label htmlFor="collaborator_role">Access</label>
+                <select id="collaborator_role" value={inviteRole} onChange={(e) => setInviteRole(e.target.value as Exclude<DeviceRole, "owner">)}>
+                  {assignableRoles.map((r) => (
+                    <option key={r} value={r}>
+                      {roleLabel[r]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="actions">
+              <button type="submit" className="primary" disabled={addCollaborator.isPending}>
+                Grant access
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
+
+      {isAdminTier && (
       <div className="card">
         <h2>Security</h2>
         {rotatedKey && (
@@ -323,6 +503,7 @@ export function DeviceDetail() {
           These all require re-entering your password.
         </p>
       </div>
+      )}
 
       <div className="card">
         <h2>Asterisk status</h2>
@@ -353,6 +534,7 @@ export function DeviceDetail() {
         )}
       </div>
 
+      {isAdminTier && (
       <div className="card">
         <h2>Restart options</h2>
         {systemFlash && <FlashBanner kind={systemFlash.kind} message={systemFlash.message} />}
@@ -379,7 +561,9 @@ export function DeviceDetail() {
           are refused.
         </p>
       </div>
+      )}
 
+      {canEditConfig && (
       <div className="card">
         <h2>Radio module (SA818/DRA818)</h2>
         <p className="hint">
@@ -457,6 +641,7 @@ export function DeviceDetail() {
           </button>
         </div>
       </div>
+      )}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 import { Router, type Request } from "express";
 
 import { requireAuth } from "../auth/middleware.js";
-import { authorizeDevice } from "../middleware/authorizeDevice.js";
+import { authorizeDevice, requireDeviceRole } from "../middleware/authorizeDevice.js";
 import { auditedSendAction } from "../middleware/auditLogger.js";
 
 // soundsRouter is mounted at /api/devices/:deviceId/sounds. Relays to
@@ -9,7 +9,8 @@ import { auditedSendAction } from "../middleware/auditLogger.js";
 // internal/cloudagent/actions_sounds.go). Upload and preview both take
 // a longer relay timeout than the default 10s -- sox transcoding
 // (either direction) plus the base64 round trip can run long on a slow
-// SD card.
+// SD card. Reads stay at authorizeDevice's own default (viewer and
+// up); writes require editor -- see docs/SECURITY.md's role model.
 export const soundsRouter = Router({ mergeParams: true });
 soundsRouter.use(requireAuth, authorizeDevice);
 
@@ -24,12 +25,12 @@ soundsRouter.get("/", async (req: Params, res) => {
   res.json(files);
 });
 
-soundsRouter.post("/", async (req: Params, res) => {
+soundsRouter.post("/", requireDeviceRole("editor"), async (req: Params, res) => {
   const result = await auditedSendAction(req, "sounds.upload", req.body, soxRelayTimeoutMs);
   res.json(result);
 });
 
-soundsRouter.delete("/:name", async (req: DeleteParams, res) => {
+soundsRouter.delete("/:name", requireDeviceRole("editor"), async (req: DeleteParams, res) => {
   await auditedSendAction(req, "sounds.delete", { name: req.params.name });
   res.status(204).end();
 });

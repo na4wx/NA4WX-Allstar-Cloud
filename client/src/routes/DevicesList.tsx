@@ -1,14 +1,18 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 
-import { useCreateDevice, useDeleteDevice, useDevices, type DeviceWithKey } from "../api/devices";
+import { useRemoveCollaborator } from "../api/collaborators";
+import { useCreateDevice, useDeleteDevice, useDevices, type DeviceRole, type DeviceWithKey } from "../api/devices";
 import { StepUpCancelledError, ensureStepUp } from "../api/stepUp";
 import { StatusPill } from "../components/StatusPill";
+
+const roleLabel: Record<DeviceRole, string> = { owner: "Owner", admin: "Admin", editor: "Editor", viewer: "Viewer" };
 
 export function DevicesList() {
   const { data: devices, isLoading, error } = useDevices();
   const createDevice = useCreateDevice();
   const deleteDevice = useDeleteDevice();
+  const removeCollaborator = useRemoveCollaborator();
   const [name, setName] = useState("");
   const [justCreated, setJustCreated] = useState<DeviceWithKey | null>(null);
   const [listError, setListError] = useState<string | null>(null);
@@ -33,6 +37,25 @@ export function DevicesList() {
         return;
       }
       setListError(err instanceof Error ? err.message : "remove failed");
+    }
+  };
+
+  // "Leave" is the editor/viewer counterpart of "Remove" -- a
+  // collaborator giving up their own access, rather than the
+  // owner/admin action of deleting the device outright.
+  const handleLeave = async (id: string, deviceName: string) => {
+    if (!confirm(`Leave "${deviceName}"? You'll lose access until someone shares it with you again.`)) {
+      return;
+    }
+    setListError(null);
+    try {
+      const stepUpToken = await ensureStepUp();
+      await removeCollaborator.mutateAsync({ deviceId: id, userId: "me", stepUpToken });
+    } catch (err) {
+      if (err instanceof StepUpCancelledError) {
+        return;
+      }
+      setListError(err instanceof Error ? err.message : "leave failed");
     }
   };
 
@@ -89,6 +112,7 @@ export function DevicesList() {
                   <th>Status</th>
                   <th>Nodes</th>
                   <th>Key</th>
+                  <th>Your access</th>
                   <th></th>
                 </tr>
               </thead>
@@ -105,9 +129,16 @@ export function DevicesList() {
                     <td>{d.nodes.length ? d.nodes.map((n) => <span key={n.number} className="tag">{n.number}</span>) : <span className="muted">none reported</span>}</td>
                     <td className="muted">…{d.apiKeyHint}</td>
                     <td>
-                      <button className="danger" onClick={() => handleDelete(d.id, d.name)}>
-                        Remove
-                      </button>
+                      <span className="tag">{roleLabel[d.role]}</span>
+                    </td>
+                    <td>
+                      {d.role === "owner" || d.role === "admin" ? (
+                        <button className="danger" onClick={() => handleDelete(d.id, d.name)}>
+                          Remove
+                        </button>
+                      ) : (
+                        <button onClick={() => handleLeave(d.id, d.name)}>Leave</button>
+                      )}
                     </td>
                   </tr>
                 ))}

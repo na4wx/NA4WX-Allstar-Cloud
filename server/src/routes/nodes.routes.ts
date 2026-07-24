@@ -1,7 +1,7 @@
 import { Router, type Request } from "express";
 
 import { requireAuth } from "../auth/middleware.js";
-import { authorizeDevice } from "../middleware/authorizeDevice.js";
+import { authorizeDevice, requireDeviceRole } from "../middleware/authorizeDevice.js";
 import { auditedSendAction } from "../middleware/auditLogger.js";
 import { subscribeNode } from "../ws/nodeLiveHub.js";
 
@@ -10,7 +10,9 @@ import { subscribeNode } from "../ws/nodeLiveHub.js";
 // route relays straight through to the device's own config.* actions
 // (see the Go app's internal/cloudagent/actions_config.go), never
 // touching a local copy of node config: the device itself is always the
-// source of truth.
+// source of truth. Every GET stays at authorizeDevice's own default
+// (viewer and up); every route that writes gets requireDeviceRole("editor")
+// on top -- see docs/SECURITY.md's role model.
 export const nodesRouter = Router({ mergeParams: true });
 nodesRouter.use(requireAuth, authorizeDevice);
 
@@ -36,18 +38,18 @@ nodesRouter.get("/:number", async (req: NodeParams, res) => {
 // own doc comment), and the caller always knows the target node number
 // up front (it's in the URL), so there's no separate "create without
 // knowing the id yet" case the way there is for devices themselves.
-nodesRouter.put("/:number", async (req: NodeParams, res) => {
+nodesRouter.put("/:number", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const node = { ...req.body, number: req.params.number };
   const saved = await auditedSendAction(req, "config.saveNode", node);
   res.json(saved);
 });
 
-nodesRouter.delete("/:number", async (req: NodeParams, res) => {
+nodesRouter.delete("/:number", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   await auditedSendAction(req, "config.deleteNode", { number: req.params.number });
   res.status(204).end();
 });
 
-nodesRouter.put("/:number/courtesy-tones", async (req: NodeParams, res) => {
+nodesRouter.put("/:number/courtesy-tones", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "config.setCourtesyTones", { ...req.body, number: req.params.number });
   res.json(result);
 });
@@ -57,7 +59,7 @@ nodesRouter.get("/:number/telemetry", async (req: NodeParams, res) => {
   res.json(entries);
 });
 
-nodesRouter.put("/:number/telemetry/:key", async (req: NodeParams, res) => {
+nodesRouter.put("/:number/telemetry/:key", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "config.setTelemetry", { number: req.params.number, key: req.params.key, value: req.body.value });
   res.json(result);
 });
@@ -67,12 +69,12 @@ nodesRouter.get("/:number/iax", async (req: NodeParams, res) => {
   res.json(result);
 });
 
-nodesRouter.put("/:number/iax", async (req: NodeParams, res) => {
+nodesRouter.put("/:number/iax", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "iax.saveRegistration", { ...req.body, number: req.params.number });
   res.json(result);
 });
 
-nodesRouter.post("/:number/dtmf", async (req: NodeParams, res) => {
+nodesRouter.post("/:number/dtmf", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "system.dtmf", { number: req.params.number, digits: req.body.digits });
   res.json(result);
 });
@@ -87,12 +89,12 @@ nodesRouter.get("/:number/functions", async (req: NodeParams, res) => {
   res.json(entries);
 });
 
-nodesRouter.put("/:number/functions", async (req: NodeParams, res) => {
+nodesRouter.put("/:number/functions", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "config.saveFunctionMacro", { ...req.body, number: req.params.number });
   res.json(result);
 });
 
-nodesRouter.delete("/:number/functions", async (req: NodeParams, res) => {
+nodesRouter.delete("/:number/functions", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "config.deleteFunctionMacro", { ...req.body, number: req.params.number });
   res.json(result);
 });
@@ -104,12 +106,12 @@ nodesRouter.get("/:number/schedule", async (req: NodeParams, res) => {
   res.json(rows);
 });
 
-nodesRouter.post("/:number/schedule", async (req: NodeParams, res) => {
+nodesRouter.post("/:number/schedule", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "schedule.saveConnection", { ...req.body, number: req.params.number });
   res.json(result);
 });
 
-nodesRouter.delete("/:number/schedule/:macroNum", async (req: NodeParams, res) => {
+nodesRouter.delete("/:number/schedule/:macroNum", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "schedule.deleteConnection", { number: req.params.number, macroNum: req.params.macroNum });
   res.json(result);
 });
@@ -119,17 +121,17 @@ nodesRouter.delete("/:number/schedule/:macroNum", async (req: NodeParams, res) =
 // complete functions/macro/telemetry/morse set, either copied from
 // another node or bootstrapped from known-good defaults, or repair one
 // whose sections are named for a different node entirely.
-nodesRouter.post("/:number/clone-config", async (req: NodeParams, res) => {
+nodesRouter.post("/:number/clone-config", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "config.cloneNodeConfig", { srcNumber: req.body.srcNumber, dstNumber: req.params.number });
   res.json(result);
 });
 
-nodesRouter.post("/:number/apply-standard-command-set", async (req: NodeParams, res) => {
+nodesRouter.post("/:number/apply-standard-command-set", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "config.applyStandardCommandSet", { number: req.params.number });
   res.json(result);
 });
 
-nodesRouter.post("/:number/normalize", async (req: NodeParams, res) => {
+nodesRouter.post("/:number/normalize", requireDeviceRole("editor"), async (req: NodeParams, res) => {
   const result = await auditedSendAction(req, "config.normalizeNodeConfig", { number: req.params.number });
   res.json(result);
 });

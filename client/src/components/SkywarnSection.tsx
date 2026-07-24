@@ -12,6 +12,7 @@ import {
   type SkyDescribeStatus,
   type SkywarnStatus,
 } from "../api/skywarn";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 
 // key is the toggle's name as SkywarnPlus's own SkyControl.py expects
@@ -41,6 +42,7 @@ export function SkywarnSection({ deviceId, node }: { deviceId: string; node: str
   const addNode = useSkywarnAddNode(deviceId);
   const setPushover = useSkywarnSetPushover(deviceId);
   const setSkyDescribe = useSkywarnSetSkyDescribe(deviceId);
+  const { canEdit } = useDeviceRole();
   const [countyToAdd, setCountyToAdd] = useState("");
   const [flash, setFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
@@ -139,7 +141,7 @@ export function SkywarnSection({ deviceId, node }: { deviceId: string; node: str
             {toggleKeys.map((t) => (
               <div className="field" key={t.key} style={{ flex: "none" }}>
                 <label>{t.label}</label>
-                <select value={String(t.read(status))} onChange={(e) => handleToggle(t.key, e.target.value === "true")}>
+                <select value={String(t.read(status))} onChange={(e) => handleToggle(t.key, e.target.value === "true")} disabled={!canEdit}>
                   <option value="true">On</option>
                   <option value="false">Off</option>
                 </select>
@@ -150,7 +152,7 @@ export function SkywarnSection({ deviceId, node }: { deviceId: string; node: str
           {!isRegistered && (
             <p className="hint">
               This node isn't registered with SkywarnPlus yet.{" "}
-              <button onClick={handleRegisterNode} disabled={addNode.isPending}>
+              <button onClick={handleRegisterNode} disabled={addNode.isPending || !canEdit}>
                 Register node {node}
               </button>
             </p>
@@ -163,7 +165,7 @@ export function SkywarnSection({ deviceId, node }: { deviceId: string; node: str
               {status.countyCodes.map((code) => (
                 <span key={code} className="tag">
                   {code}{" "}
-                  <button onClick={() => handleRemoveCounty(code)} style={{ marginLeft: "0.3rem", padding: "0 0.3rem" }}>
+                  <button onClick={() => handleRemoveCounty(code)} style={{ marginLeft: "0.3rem", padding: "0 0.3rem" }} disabled={!canEdit}>
                     ×
                   </button>
                 </span>
@@ -183,7 +185,7 @@ export function SkywarnSection({ deviceId, node }: { deviceId: string; node: str
               </datalist>
             </div>
             <div className="field" style={{ flex: "none", alignSelf: "flex-end" }}>
-              <button onClick={handleAddCounty} disabled={setCounties.isPending}>
+              <button onClick={handleAddCounty} disabled={setCounties.isPending || !canEdit}>
                 Add
               </button>
             </div>
@@ -224,7 +226,7 @@ export function SkywarnSection({ deviceId, node }: { deviceId: string; node: str
               </div>
             </div>
             <div className="actions">
-              <button type="submit" disabled={setPushover.isPending}>
+              <button type="submit" disabled={setPushover.isPending || !canEdit}>
                 Save Pushover settings
               </button>
             </div>
@@ -271,7 +273,7 @@ export function SkywarnSection({ deviceId, node }: { deviceId: string; node: str
               </div>
             </div>
             <div className="actions">
-              <button type="submit" disabled={setSkyDescribe.isPending}>
+              <button type="submit" disabled={setSkyDescribe.isPending || !canEdit}>
                 Save SkyDescribe settings
               </button>
             </div>

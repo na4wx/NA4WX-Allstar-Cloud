@@ -263,6 +263,57 @@ cross-subdomain fetch same-site, not cross-site, so the existing
   reset request is logged instead of sent rather than the route
   erroring — see that file's own doc comment.
 
+## 12. Device roles (owner/admin/editor/viewer)
+
+Every device starts with exactly one user able to act on it —
+`Device.owner`. Collaborators extend that to other accounts, at one of
+three tiers, without ever touching the owner's own standing:
+
+- **Administrator** — full parity with the owner for everything scoped
+  to the device: all config/sounds/schedule edits, restart/reboot, raw
+  config, rotating/revoking the API key, deleting the device, and
+  managing other collaborators (including other admins). The one thing
+  even an admin collaborator can never do is remove or downgrade the
+  owner — there is no route that touches `Device.owner` at all once a
+  device exists.
+- **Editor** — can view and edit node config, sounds, schedules,
+  tones, SkywarnPlus, and SA818 programming. Cannot restart Asterisk,
+  reboot the device, or reach raw config *at all*, including reading
+  it — `rawconfig.routes.ts` and `system.routes.ts` are gated
+  admin-tier at the router level, not per-route, so there's a single
+  place that boundary is enforced. Raw config is read-gated (not just
+  write-gated) because it can contain secrets a lesser tier shouldn't
+  see — an IAX2 registration password sits in plain text in iax.conf.
+- **Viewer** — read-only everywhere a viewer has access at all (the
+  same surface as editor, minus every write); the admin-only surface
+  is invisible to them the same as to an editor.
+
+Enforcement is `server/src/middleware/authorizeDevice.ts`:
+`authorizeDevice` resolves `req.deviceRole` from either
+`Device.owner` or the `Device.collaborators` array (embedded
+subdocuments, `{ user, role, addedAt }` — denormalized the same way
+the existing node-summary cache is, so one query answers "does this
+user have any standing here, and what tier"), then
+`requireDeviceRole(min)` — composable per-route exactly like
+`requireStepUp` already is — 403s if the resolved tier doesn't meet
+the route's minimum. A device that exists but the caller has no
+standing on still 404s (never leaks existence to a stranger, same as
+before this feature); a device the caller can see but doesn't have
+enough tier for 403s instead, since at that point they already know
+it exists.
+
+Granting access (`POST /api/devices/:deviceId/collaborators`) is
+itself admin-tier and step-up gated — exactly as sensitive as rotating
+the device's own API key, since it changes who can act on the device
+at all. It only works against an email with an existing account
+(a pending-invite-by-email flow for accounts that don't exist yet is a
+deliberate scope cut, not an oversight). Every grant, role change, and
+removal is written to the same `AuditLogModel` the relayed-action trail
+uses (`collaborator.add` / `.updateRole` / `.remove` / `.leave`).
+Removing *yourself* from a device (leaving) is always allowed
+regardless of tier — the one asymmetric case, still step-up gated for
+consistency with every other collaborator-management action.
+
 ## Dependency audit
 
 Run as part of Phase 4 hardening; re-run periodically, not treated as

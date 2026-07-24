@@ -1,12 +1,13 @@
 import { Router, type Request } from "express";
 
 import { requireAuth } from "../auth/middleware.js";
-import { authorizeDevice } from "../middleware/authorizeDevice.js";
+import { authorizeDevice, requireDeviceRole } from "../middleware/authorizeDevice.js";
 import { auditedSendAction } from "../middleware/auditLogger.js";
 
 // skywarnplusRouter is mounted at /api/devices/:deviceId/skywarn.
 // Relays to the device's skywarn.* actions (see the Go app's
-// internal/cloudagent/actions_skywarnplus.go).
+// internal/cloudagent/actions_skywarnplus.go). Reads stay at
+// authorizeDevice's own default (viewer and up); writes require editor.
 export const skywarnplusRouter = Router({ mergeParams: true });
 skywarnplusRouter.use(requireAuth, authorizeDevice);
 
@@ -27,27 +28,27 @@ skywarnplusRouter.get("/status", async (req: Params, res) => {
   res.json(status);
 });
 
-skywarnplusRouter.post("/toggle", async (req: Params, res) => {
+skywarnplusRouter.post("/toggle", requireDeviceRole("editor"), async (req: Params, res) => {
   const result = await auditedSendAction(req, "skywarn.setToggle", req.body);
   res.json(result);
 });
 
-skywarnplusRouter.post("/county-codes", async (req: Params, res) => {
+skywarnplusRouter.post("/county-codes", requireDeviceRole("editor"), async (req: Params, res) => {
   const result = await auditedSendAction(req, "skywarn.setCounties", req.body);
   res.json(result);
 });
 
-skywarnplusRouter.post("/nodes", async (req: Params, res) => {
+skywarnplusRouter.post("/nodes", requireDeviceRole("editor"), async (req: Params, res) => {
   const result = await auditedSendAction(req, "skywarn.addNode", req.body);
   res.json(result);
 });
 
-skywarnplusRouter.post("/pushover", async (req: Params, res) => {
+skywarnplusRouter.post("/pushover", requireDeviceRole("editor"), async (req: Params, res) => {
   const result = await auditedSendAction(req, "skywarn.setPushover", req.body);
   res.json(result);
 });
 
-skywarnplusRouter.post("/skydescribe", async (req: Params, res) => {
+skywarnplusRouter.post("/skydescribe", requireDeviceRole("editor"), async (req: Params, res) => {
   const result = await auditedSendAction(req, "skywarn.setSkyDescribe", req.body);
   res.json(result);
 });

@@ -15,6 +15,16 @@ export interface DeviceStatus {
   error?: string;
 }
 
+// DeviceRole is this account's own standing on a device -- "owner" is
+// Device.owner itself; the other three come from a collaborator grant
+// (see api/collaborators.ts and docs/SECURITY.md's role model). Not
+// present on the SSE/live-status payload (see toDeviceSummary's own
+// doc comment server-side for why a shared broadcast can't carry a
+// per-viewer field) -- only ever set from a REST response, so
+// DeviceDetail.tsx's SSE handler merges rather than replaces to avoid
+// losing it on the next heartbeat.
+export type DeviceRole = "owner" | "admin" | "editor" | "viewer";
+
 export interface Device {
   id: string;
   name: string;
@@ -25,6 +35,7 @@ export interface Device {
   lastStatus: DeviceStatus | null;
   nodes: DeviceNode[];
   createdAt: string;
+  role: DeviceRole;
 }
 
 export interface DeviceWithKey extends Device {

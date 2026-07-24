@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
+import { useDevice } from "../api/devices";
 import { useNodeLive } from "../api/nodeLive";
 import { useDeleteNode, useNode, useSaveNode, type Node } from "../api/nodes";
 import { AllstarNetworkTab } from "../components/AllstarNetworkTab";
@@ -15,6 +16,7 @@ import { SoundScheduleSection } from "../components/SoundScheduleSection";
 import { Tabs, TabPanel, type TabDef } from "../components/Tabs";
 import { TelemetrySection } from "../components/TelemetrySection";
 import { WXToneSection } from "../components/WXToneSection";
+import { DeviceRoleProvider } from "../state/deviceRole";
 
 type FormState = Omit<Node, "number">;
 
@@ -49,6 +51,7 @@ const tabs: TabDef[] = [
 
 export function NodeEditor() {
   const { deviceId, number } = useParams<{ deviceId: string; number: string }>();
+  const { data: device, isLoading: deviceLoading } = useDevice(deviceId!);
   const { data: existing, isLoading, isError } = useNode(deviceId!, number!);
   const saveNode = useSaveNode(deviceId!);
   const deleteNode = useDeleteNode(deviceId!);
@@ -70,6 +73,10 @@ export function NodeEditor() {
 
   const isNew = isError; // 404 from useNode means this number doesn't exist yet
   const { live, connected: liveConnected } = useNodeLive(deviceId!, number!);
+  // Computed directly from the fetched device rather than useDeviceRole()
+  // -- this component is the one that creates <DeviceRoleProvider>, so
+  // its own top-level body renders outside that provider.
+  const canEdit = device ? device.role !== "viewer" : true;
 
   const activeTab = tabs.some((t) => t.id === searchParams.get("tab")) ? searchParams.get("tab")! : "setup";
   const setActiveTab = (id: string) => setSearchParams((prev) => { const next = new URLSearchParams(prev); next.set("tab", id); return next; }, { replace: true });
@@ -96,11 +103,12 @@ export function NodeEditor() {
     navigate(`/devices/${deviceId}/nodes`);
   };
 
-  if (isLoading) {
+  if (isLoading || deviceLoading) {
     return <p className="hint">Loading…</p>;
   }
 
   return (
+    <DeviceRoleProvider role={device?.role ?? "viewer"}>
     <div>
       <p>
         <Link to={`/devices/${deviceId}/nodes`}>&larr; Nodes</Link>
@@ -205,11 +213,11 @@ export function NodeEditor() {
           </div>
 
           <div className="actions">
-            <button type="submit" className="primary" disabled={saveNode.isPending}>
+            <button type="submit" className="primary" disabled={saveNode.isPending || !canEdit}>
               Save
             </button>
             {!isNew && (
-              <button type="button" className="danger" onClick={handleDelete} disabled={deleteNode.isPending}>
+              <button type="button" className="danger" onClick={handleDelete} disabled={deleteNode.isPending || !canEdit}>
                 Delete node
               </button>
             )}
@@ -282,5 +290,6 @@ export function NodeEditor() {
         {isNew ? <p className="hint">Save this node first to manage its SkywarnPlus settings.</p> : <SkywarnSection deviceId={deviceId!} node={number!} />}
       </TabPanel>
     </div>
+    </DeviceRoleProvider>
   );
 }

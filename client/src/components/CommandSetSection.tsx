@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 import { useCloneOrApplyCommandSet, useNodes, useNormalizeNodeConfig, standardCommandSetSentinel } from "../api/nodes";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 
 // CommandSetSection gives a node (including one created before this app
@@ -14,6 +15,7 @@ export function CommandSetSection({ deviceId, number }: { deviceId: string; numb
   const { data: nodes } = useNodes(deviceId);
   const cloneOrApply = useCloneOrApplyCommandSet(deviceId, number);
   const normalize = useNormalizeNodeConfig(deviceId, number);
+  const { canEdit } = useDeviceRole();
   const [from, setFrom] = useState("");
   const [flash, setFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
@@ -74,7 +76,7 @@ export function CommandSetSection({ deviceId, number }: { deviceId: string; numb
           </div>
         </div>
         <div className="actions">
-          <button type="submit" className="primary" disabled={cloneOrApply.isPending}>
+          <button type="submit" className="primary" disabled={cloneOrApply.isPending || !canEdit}>
             Apply
           </button>
         </div>
@@ -85,7 +87,7 @@ export function CommandSetSection({ deviceId, number }: { deviceId: string; numb
         them to use sections named for this node instead.
       </p>
       <div className="actions">
-        <button type="button" onClick={handleNormalize} disabled={normalize.isPending}>
+        <button type="button" onClick={handleNormalize} disabled={normalize.isPending || !canEdit}>
           Repair section names
         </button>
       </div>

@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { useIAXRegistration, useSaveIAXRegistration, type SaveIAXRegistration } from "../api/nodes";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 
 const blank: SaveIAXRegistration = {
@@ -23,6 +24,7 @@ const blank: SaveIAXRegistration = {
 export function AllstarNetworkTab({ deviceId, node }: { deviceId: string; node: string }) {
   const { data, isLoading, error } = useIAXRegistration(deviceId, node);
   const save = useSaveIAXRegistration(deviceId, node);
+  const { canEdit } = useDeviceRole();
   const [form, setForm] = useState<SaveIAXRegistration>(blank);
   const [flash, setFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
@@ -110,7 +112,7 @@ export function AllstarNetworkTab({ deviceId, node }: { deviceId: string; node: 
         </div>
 
         <div className="actions">
-          <button type="submit" className="primary" disabled={save.isPending}>
+          <button type="submit" className="primary" disabled={save.isPending || !canEdit}>
             Save
           </button>
         </div>

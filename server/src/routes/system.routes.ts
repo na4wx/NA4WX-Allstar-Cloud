@@ -1,7 +1,7 @@
 import { Router, type Request } from "express";
 
 import { requireAuth } from "../auth/middleware.js";
-import { authorizeDevice } from "../middleware/authorizeDevice.js";
+import { authorizeDevice, requireDeviceRole } from "../middleware/authorizeDevice.js";
 import { auditedSendAction } from "../middleware/auditLogger.js";
 import { requireStepUp } from "../middleware/stepUpAuth.js";
 
@@ -12,9 +12,11 @@ import { requireStepUp } from "../middleware/stepUpAuth.js";
 // 400 explaining so, regardless of what this API allows. Both also
 // require step-up auth (see middleware/stepUpAuth.ts) -- among the
 // highest-risk actions this API exposes, per the Go app's plan doc's
-// Security section (#5).
+// Security section (#5). The whole router is additionally admin-tier
+// only -- an editor collaborator can change config but never restart
+// Asterisk or reboot the device.
 export const systemRouter = Router({ mergeParams: true });
-systemRouter.use(requireAuth, authorizeDevice);
+systemRouter.use(requireAuth, authorizeDevice, requireDeviceRole("admin"));
 
 type SystemParams = Request<{ deviceId: string }>;
 

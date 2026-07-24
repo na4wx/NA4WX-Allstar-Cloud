@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { useSetTelemetry, useTelemetry, type ToneSpec } from "../api/nodes";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 
 const blankTone: ToneSpec = { freq1: 0, freq2: 0, durationMs: 0, amplitude: 0 };
@@ -11,6 +12,7 @@ const blankTone: ToneSpec = { freq1: 0, freq2: 0, durationMs: 0, amplitude: 0 };
 // local app's own ParseSingleTone-driven either/or editor.
 function TelemetryRow({ deviceId, node, entryKey, value, tone }: { deviceId: string; node: string; entryKey: string; value: string; tone?: ToneSpec }) {
   const setTelemetry = useSetTelemetry(deviceId, node);
+  const { canEdit } = useDeviceRole();
   const [toneForm, setToneForm] = useState<ToneSpec>(tone ?? blankTone);
   const [rawForm, setRawForm] = useState(value);
   const [flash, setFlash] = useState<string | null>(null);
@@ -63,7 +65,7 @@ function TelemetryRow({ deviceId, node, entryKey, value, tone }: { deviceId: str
               <input type="number" value={toneForm.amplitude} onChange={(e) => setToneForm((f) => ({ ...f, amplitude: Number(e.target.value) }))} />
             </div>
             <div className="field" style={{ flex: "none" }}>
-              <button type="button" onClick={handleSaveTone} disabled={setTelemetry.isPending}>
+              <button type="button" onClick={handleSaveTone} disabled={setTelemetry.isPending || !canEdit}>
                 Save
               </button>
             </div>
@@ -83,7 +85,7 @@ function TelemetryRow({ deviceId, node, entryKey, value, tone }: { deviceId: str
             <input type="text" value={rawForm} onChange={(e) => setRawForm(e.target.value)} />
           </div>
           <div className="field" style={{ flex: "none" }}>
-            <button type="button" onClick={handleSaveRaw} disabled={setTelemetry.isPending}>
+            <button type="button" onClick={handleSaveRaw} disabled={setTelemetry.isPending || !canEdit}>
               Save
             </button>
           </div>

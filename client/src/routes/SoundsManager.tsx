@@ -9,6 +9,12 @@ import { FlashBanner } from "../components/FlashBanner";
 export function SoundsManager() {
   const { deviceId } = useParams<{ deviceId: string }>();
   const { data: device } = useDevice(deviceId!);
+  // This route isn't nested inside NodeEditor's tree (it's its own
+  // top-level /devices/:deviceId/sounds route), so there's no
+  // DeviceRoleProvider to read from -- computed directly from the
+  // device this page already fetches, same as NodeEditor's own
+  // top-level canEdit.
+  const canEdit = device ? device.role !== "viewer" : true;
   const { data: sounds, isLoading, error } = useSounds(deviceId!);
   const upload = useUploadSound(deviceId!);
   const deleteSound = useDeleteSound(deviceId!);
@@ -109,7 +115,7 @@ export function SoundsManager() {
             </div>
           </div>
           <div className="actions">
-            <button type="submit" className="primary" disabled={upload.isPending}>
+            <button type="submit" className="primary" disabled={upload.isPending || !canEdit}>
               Upload
             </button>
           </div>
@@ -143,7 +149,7 @@ export function SoundsManager() {
                       )}
                     </td>
                     <td>
-                      <button className="danger" onClick={() => handleDelete(s.name)}>
+                      <button className="danger" onClick={() => handleDelete(s.name)} disabled={!canEdit}>
                         Delete
                       </button>
                     </td>
@@ -206,7 +212,7 @@ export function SoundsManager() {
           <div style={{ marginTop: "1rem" }}>
             <audio controls autoPlay src={`data:audio/wav;base64,${generatedAudio}`} style={{ width: "100%" }} />
             <div className="actions">
-              <button className="primary" onClick={handleSendGeneratedToDevice} disabled={saveGenerated.isPending}>
+              <button className="primary" onClick={handleSendGeneratedToDevice} disabled={saveGenerated.isPending || !canEdit}>
                 Send to device
               </button>
             </div>

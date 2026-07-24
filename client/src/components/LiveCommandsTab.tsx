@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 
 import { useSendDTMF } from "../api/nodes";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 import { FunctionMacroTable } from "./FunctionMacroTable";
 
@@ -28,6 +29,7 @@ const functionReference: { command: string; description: string }[] = [
 // reference table.
 export function LiveCommandsTab({ deviceId, node }: { deviceId: string; node: string }) {
   const sendDTMF = useSendDTMF(deviceId, node);
+  const { canEdit } = useDeviceRole();
   const [digits, setDigits] = useState("");
   const [flash, setFlash] = useState<{ kind: "ok" | "error"; message: string } | null>(null);
 
@@ -60,7 +62,7 @@ export function LiveCommandsTab({ deviceId, node }: { deviceId: string; node: st
             </div>
           </div>
           <div className="actions">
-            <button type="submit" className="primary" disabled={sendDTMF.isPending}>
+            <button type="submit" className="primary" disabled={sendDTMF.isPending || !canEdit}>
               Send
             </button>
           </div>

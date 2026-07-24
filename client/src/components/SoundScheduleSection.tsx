@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 
 import { useDeleteSoundSchedule, useSaveSoundSchedule, useSoundSchedule } from "../api/soundSchedule";
 import { useSounds } from "../api/sounds";
+import { useDeviceRole } from "../state/deviceRole";
 import { FlashBanner } from "./FlashBanner";
 
 const weekdayOptions = [
@@ -29,6 +30,7 @@ export function SoundScheduleSection({ deviceId, node }: { deviceId: string; nod
   const save = useSaveSoundSchedule(deviceId, node);
   const del = useDeleteSoundSchedule(deviceId, node);
   const { data: sounds } = useSounds(deviceId);
+  const { canEdit } = useDeviceRole();
 
   const [file, setFile] = useState("");
   const [reach, setReach] = useState<"local" | "network">("local");
@@ -89,7 +91,7 @@ export function SoundScheduleSection({ deviceId, node }: { deviceId: string; nod
                 <td>{entry.month}</td>
                 <td>{entry.days_of_week && entry.days_of_week.length > 0 ? entry.days_of_week.map((d) => weekdayLabelByValue.get(d)).join(", ") : "Every day"}</td>
                 <td>
-                  <button className="danger" onClick={() => del.mutate(entry.id)}>
+                  <button className="danger" onClick={() => del.mutate(entry.id)} disabled={!canEdit}>
                     Delete
                   </button>
                 </td>
@@ -151,7 +153,7 @@ export function SoundScheduleSection({ deviceId, node }: { deviceId: string; nod
           </div>
         </div>
         <div className="actions">
-          <button type="submit" className="primary" disabled={save.isPending}>
+          <button type="submit" className="primary" disabled={save.isPending || !canEdit}>
             Add schedule entry
           </button>
         </div>
