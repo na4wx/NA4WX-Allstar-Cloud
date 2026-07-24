@@ -219,6 +219,52 @@ export function DeviceDetail() {
       </div>
 
       <div className="card">
+        <div className="label-row">
+          <h2 style={{ margin: 0 }}>Nodes reported by this device</h2>
+        </div>
+        {device.nodes.length === 0 && <p className="hint">None reported yet.</p>}
+        {device.nodes.length > 0 && (
+          <div className="table-scroll">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Number</th>
+                  <th>Last seen</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {device.nodes.map((n) => (
+                  <tr key={n.number}>
+                    <td className="tag">{n.number}</td>
+                    <td>{new Date(n.lastSeenAt).toLocaleString()}</td>
+                    <td>
+                      <Link to={`/devices/${device.id}/nodes/${n.number}`}>Edit</Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="actions">
+          <Link to={`/devices/${device.id}/nodes`} className="btn">
+            Manage nodes
+          </Link>
+          <Link to={`/devices/${device.id}/sounds`} className="btn">
+            Manage sounds
+          </Link>
+          <Link to={`/devices/${device.id}/rawconfig`} className="btn danger">
+            Raw config
+          </Link>
+        </div>
+        <p className="hint" style={{ marginTop: "1rem" }}>
+          Each node's edit page is tabbed, matching the local app's own Setup / Tones &amp; Audio / Allstar Network / Live
+          &amp; Commands / Scheduler / SkywarnPlus layout — full parity with the local app's own node editor.
+        </p>
+      </div>
+
+      <div className="card">
         <h2>Security</h2>
         {rotatedKey && (
           <div className="card" style={{ borderColor: "var(--accent)", marginBottom: "1.25rem" }}>
@@ -410,52 +456,6 @@ export function DeviceDetail() {
             Program module
           </button>
         </div>
-      </div>
-
-      <div className="card">
-        <div className="label-row">
-          <h2 style={{ margin: 0 }}>Nodes reported by this device</h2>
-        </div>
-        {device.nodes.length === 0 && <p className="hint">None reported yet.</p>}
-        {device.nodes.length > 0 && (
-          <div className="table-scroll">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Number</th>
-                  <th>Last seen</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {device.nodes.map((n) => (
-                  <tr key={n.number}>
-                    <td className="tag">{n.number}</td>
-                    <td>{new Date(n.lastSeenAt).toLocaleString()}</td>
-                    <td>
-                      <Link to={`/devices/${device.id}/nodes/${n.number}`}>Edit</Link>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <div className="actions">
-          <Link to={`/devices/${device.id}/nodes`} className="btn">
-            Manage nodes
-          </Link>
-          <Link to={`/devices/${device.id}/sounds`} className="btn">
-            Manage sounds
-          </Link>
-          <Link to={`/devices/${device.id}/rawconfig`} className="btn danger">
-            Raw config
-          </Link>
-        </div>
-        <p className="hint" style={{ marginTop: "1rem" }}>
-          Each node's edit page is tabbed, matching the local app's own Setup / Tones &amp; Audio / Allstar Network / Live
-          &amp; Commands / Scheduler / SkywarnPlus layout — full parity with the local app's own node editor.
-        </p>
       </div>
     </div>
   );

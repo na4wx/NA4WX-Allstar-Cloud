@@ -105,12 +105,17 @@ export function NodeEditor() {
       <p>
         <Link to={`/devices/${deviceId}/nodes`}>&larr; Nodes</Link>
       </p>
-      <h1>
-        Node {number} {isNew && <span className="tag">new</span>}
-      </h1>
-      {flash && <FlashBanner kind={flash.kind} message={flash.message} />}
 
-      <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+      <div className="subnav">
+        <div className="subnav-title">
+          <h1>
+            Node {number} {isNew && <span className="tag">new</span>}
+          </h1>
+        </div>
+        <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+      </div>
+
+      {flash && <FlashBanner kind={flash.kind} message={flash.message} />}
 
       <TabPanel id="setup" active={activeTab}>
         <form onSubmit={handleSubmit}>

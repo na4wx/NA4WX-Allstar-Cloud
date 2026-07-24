@@ -183,6 +183,34 @@ table th { color: var(--text-dim); font-weight: 550; font-size: 0.86rem; }
 .tab:hover { color: var(--text); }
 .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
 
+/* subnav is a page-local echo of header.topbar's own left-title/
+   right-links split -- used where a page's own section switcher (e.g.
+   NodeEditor's tabs) deserves the same "title left, options right"
+   shape as the app's main nav, instead of stacking a heading above a
+   tab strip. The bottom border/spacing lives here, on the shared row,
+   so the nested .tabs doesn't need its own (see below). */
+.subnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.subnav-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+.subnav-title h1 { margin: 0; }
+.subnav .tabs {
+  border-bottom: none;
+  margin-bottom: 0;
+  flex-wrap: wrap;
+}
+
 .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-dim); opacity: 0.5; flex-shrink: 0; }
 .live-dot.on { background: var(--ok); opacity: 1; animation: live-breathe 2s ease-in-out infinite; }
 @keyframes live-breathe { 50% { opacity: 0.4; } }
